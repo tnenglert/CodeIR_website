@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeIR FAQ</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="faq-header">
+        <div class="hero-overlay">
+            <h1><a href="index.html" class="faq-home-link">CodeIR</a></h1>
+            <p>Frequently Asked Questions</p>
+        </div>
+    </header>
+
+    <!-- hamburger menu -->
+    <div class="menu-wrapper">
+      <button class="menu-btn" onclick="document.querySelector('.menu-dropdown').classList.toggle('menu-open')">
+          <span></span>
+          <span></span>
+          <span></span>
+      </button>
+      <nav class="menu-dropdown">
+          <a href="index.html">Home</a>
+          <a href="faq.html">FAQ</a>
+          <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+
+    <main class="container">
+
+    <!-- ________________________ Category: The Basics ________________________ -->
+    <div class="faq-category">
+        <h2>The Basics</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How long does it take to generate the IR?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Indexing is pure code — AST parsing, classification, and IR generation.
+                    No LLM summarization, no API calls. A mid-sized repo like Flask (83 files)
+                    indexes in seconds. Larger codebases like Django or SQLAlchemy take a bit
+                    longer but still finish in under a minute on typical hardware.
+                </p>
+                <p>Re-indexing is incremental: only changed files get reprocessed.</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How are entities defined?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    CodeIR uses Python's AST module to extract every function, async function,
+                    class, method, and module-level constant. Each gets a stable ID, boundary
+                    markers (start/end line), and import analysis.
+                </p>
+                <p>
+                    Nested functions, decorated wrappers, and class attributes are all captured.
+                    Lambda assignments are captured as module-level constants. Each entity gets
+                    its own IR at all three levels:
+                </p>
+<pre><code>Index:    FN RDTKN #HTTP #CORE
+Behavior: FN RDTKN C=session_get F=IR A=2 #HTTP #CORE
+Source:   [FN RDTKN @auth/tokens.py:47]
+          async def read_token(token: str, session: Session) -> TokenData:
+              ...</code></pre>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Is it just summarization?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    No. Summarization is lossy and non-deterministic — you get a different summary
+                    each time, and you can't verify it against source. CodeIR is compilation:
+                    deterministic, lossless at each level, and invertible (you can always expand
+                    back to source).
+                </p>
+                <p>
+                    Every field in the IR is mechanically extracted from the AST. <code>C=</code>
+                    lists actual call sites, <code>F=</code> flags are derived from control flow
+                    structures, <code>A=</code> counts real assignments. Nothing is inferred or
+                    paraphrased.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Wait, this isn't really a tool?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    It's both. Yes, it's a CLI tool you install and use today. But underneath,
+                    it's a representation layer — a way to encode programs for machine reasoning
+                    instead of human editing.
+                </p>
+                <p>
+                    The real long-term implication is bigger: models may eventually reason about
+                    code primarily through IR, not source, exactly like compilers do. Source code
+                    is the human-readable format. IR is the machine-reasoning format. CodeIR is
+                    an early implementation of that idea.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ________________________ Category: Token Economics ________________________ -->
+    <div class="faq-category">
+        <h2>Token Economics</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>When you convert a repo to CodeIR, what happens to token count?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    It's not a single compression ratio — it's a multi-level system. For Flask
+                    (83 files, 1,629 entities), the full Index representation of every entity
+                    fits in roughly 15–20x fewer tokens than the raw source.
+                </p>
+                <p>
+                    But the point isn't "make the repo smaller." It's that Claude can hold the
+                    entire codebase's structure and behavior in context, then retrieve source
+                    only for the specific entities it needs to edit.
+                </p>
+                <p>
+                    In our tests, Claude consumed ~350 lines of content to produce the same
+                    analysis that required ~1,620 lines of raw source reading without the tool.
+                    Instead of reading 120k tokens and hoping you picked the right files, you
+                    read 8k tokens of orientation and then surgically retrieve the 2k tokens of
+                    source you actually need.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Why not just give the model more context?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Large codebases don't exceed LLM context because they are too large. They
+                    exceed context because source code is a poor representation for architectural
+                    reasoning. Even with a 200k token window, raw code doesn't scale well.
+                </p>
+                <p>Consider what the model actually sees:</p>
+<pre><code>def get_user_permissions(user):
+    if user.is_superuser:
+        return Permission.objects.all()</code></pre>
+                <p>
+                    The LLM processes 25–40 tokens here. But the real architectural information is:
+                </p>
+<pre><code>get_user_permissions → checks user.is_superuser → queries Permission model</code></pre>
+                <p>
+                    Three facts. Everything else is syntax noise. In a typical Python file,
+                    80% or more of tokens carry zero architectural signal.
+                </p>
+                <p>
+                    Even if context windows became infinite, there's still <strong>attention
+                    dilution</strong>. Transformers distribute attention across tokens. If a
+                    prompt contains 80% boilerplate and 20% structure, the model spends most
+                    of its compute on the wrong thing. CodeIR flips that ratio to roughly 80%
+                    structure and 20% metadata.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How large can a codebase be before CodeIR stops fitting in context?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    At Index level, CodeIR fits roughly 20,000 entities per 200k context window.
+                    For reference, Django is ~41,000 entities and Tryton is ~20,000.
+                </p>
+                <p>
+                    For codebases that exceed this, per-category bearings files break the
+                    architectural map into slices. The agent loads only the categories relevant
+                    to its current task — it never needs the whole Index at once.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ________________________ Category: Architecture & Accuracy ________________________ -->
+    <div class="faq-category">
+        <h2>Architecture &amp; Accuracy</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How does CodeIR represent relationships?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Behavior-level IR captures call relationships (<code>C=</code>), inheritance
+                    (<code>B=</code>), and flags for behavioral patterns (<code>F=EIR</code>).
+                    Domain classification tags (<code>#AUTH</code>, <code>#CORE</code>) group
+                    entities by architectural role.
+                </p>
+                <p>
+                    The <code>callers</code> command provides three-tier caller resolution:
+                </p>
+<pre><code>⏺ codeir callers OPNSSSN
+  ⎿   APPCNTXT.02    AppContext              src/flask/ctx.py       [import]
+      GTSSSN         AppContext._get_session  src/flask/ctx.py       [local]
+     ~FLSKCLNT       FlaskClient             src/flask/testing.py   [fuzzy]</code></pre>
+                <p>
+                    Import-level callers are resolved via import statements. Local callers are
+                    same-file references. Fuzzy callers (marked <code>~</code>) are repo-wide
+                    name matches when resolution is ambiguous.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How accurate are the call relationships?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>CodeIR resolves call relationships using three tiers of confidence:</p>
+                <ul>
+                    <li><strong>Local:</strong> Same-file calls with explicit references — highest confidence</li>
+                    <li><strong>Import:</strong> Calls resolved via import statements — high confidence</li>
+                    <li><strong>Fuzzy:</strong> Repo-wide name matches when resolution is ambiguous — marked with <code>~</code> so the model knows to verify</li>
+                </ul>
+                <p>
+                    The tiered approach means the model always knows how much to trust a
+                    relationship. Fuzzy matches are explicitly flagged rather than silently
+                    presented as certain.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>What Python features are not captured?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    CodeIR is based on static AST analysis and does not capture runtime
+                    behaviors such as monkey-patching, dynamically generated methods,
+                    <code>setattr</code>-based attribute creation, or metaclass magic that
+                    generates methods at class creation time.
+                </p>
+                <p>
+                    Heavy use of <code>__getattr__</code>, dynamic dispatch, or code generation
+                    (e.g., <code>exec</code>/<code>eval</code>) will produce gaps in the call
+                    graph. The fuzzy caller tier partially compensates by catching name-based
+                    matches, but it's not a substitute for runtime analysis.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>What happens when the codebase changes?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Run <code>codeir index</code> again. Re-indexing is incremental — only
+                    modified files are reprocessed. Entity IDs remain stable as long as the
+                    entity's name and location don't change, so the model's "mental map"
+                    persists across re-indexes.
+                </p>
+                <p>
+                    If an entity is renamed or moved, it gets a new ID. The old ID simply
+                    stops resolving. There's no migration step.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ________________________ Category: Comparisons ________________________ -->
+    <div class="faq-category">
+        <h2>Comparisons</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>How is this different from existing code indexers?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Most code indexers (ctags, LSP, Sourcegraph) are designed for
+                    <strong>navigation</strong>: "jump to definition," "find references."
+                    They answer <em>where is this thing?</em>
+                </p>
+                <p>
+                    CodeIR is designed for <strong>architectural reasoning</strong>: "what does
+                    this entity do, what does it depend on, and what breaks if I change it?"
+                    It answers <em>how does this system work?</em>
+                </p>
+                <p>
+                    The output format reflects this. Indexers produce symbol tables. CodeIR
+                    produces multi-level IR with behavioral flags, call graphs, and domain
+                    classification — a representation an LLM can reason over without reading
+                    source.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Why not just retrieve the relevant files?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Retrieval assumes you already know what to search for. But architectural
+                    understanding comes first — you need to know the shape of the system before
+                    you can ask the right questions.
+                </p>
+                <p>
+                    In our benchmarks, embedding-based retrieval accuracy actually
+                    <em>decreased</em> as models got stronger (Opus scored 33% on MPNet
+                    retrieval vs. Haiku's 71%). Stronger models are better at recognizing when
+                    retrieved fragments don't give them enough context. They hedge instead of
+                    guessing.
+                </p>
+                <p>
+                    CodeIR's orient-first approach gives the model the architectural map before
+                    it retrieves anything. It knows what to look for because it's already seen
+                    the whole system at Index level.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Does it help smaller models?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    We have early data on this. The original benchmarks tested Haiku, GPT 4.1,
+                    and DeepSeek alongside Sonnet and Opus. CodeIR improved accuracy across all
+                    models, though the delta was largest on stronger models (where baselines
+                    degrade most due to the model's increased ability to recognize insufficient
+                    context).
+                </p>
+                <p>
+                    The data needs re-running with corrected tags, but the question is already
+                    in our research plan.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ________________________ Category: Design Decisions ________________________ -->
+    <div class="faq-category">
+        <h2>Design Decisions</h2>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Why are the entity names "CHRUHGHNSEDHRFJ"?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Because it's v1. The current scheme uses vowel-stripped abbreviations
+                    (<code>FNLZFLSHCHNGS</code> = <code>finalize_flush_changes</code>) to
+                    maximize the number of entities that fit in a context window.
+                </p>
+                <p>
+                    We're actively performing interactive testing with Claude to determine the
+                    minimum LLM-understandable ID length — which does not necessarily correspond
+                    to human readability. The goal is the shortest ID that a model can reliably
+                    map back to the entity it represents. Early results suggest there's room to
+                    shorten further without hurting model accuracy.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Does it scale?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Yes, and it gets <em>better</em> with scale. Compression improves with
+                    repository size because larger codebases have more structural redundancy:
+                    hundreds of model classes following the same patterns, view functions with
+                    identical structures, test files with standardized layouts.
+                </p>
+                <p>Codebases we've tested:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Repository</th><th>Files</th><th>Entities</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Flask</td><td>83</td><td>1,629</td></tr>
+                        <tr><td>SQLAlchemy</td><td>689</td><td>38,672</td></tr>
+                        <tr><td>Django</td><td>2,894</td><td>41,819</td></tr>
+                        <tr><td>Tryton</td><td>2,375</td><td>20,457</td></tr>
+                    </tbody>
+                </table>
+                <p>Storage is SQLite with WAL mode. Indexing is incremental. There's no practical upper bound we've hit yet.</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Does CodeIR work with languages other than Python?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    The current implementation targets Python via the built-in <code>ast</code>
+                    module. But the architecture is language-agnostic — the IR format, the
+                    multi-level hierarchy, the entity ID scheme, and the CLI all work
+                    independently of the parser.
+                </p>
+                <p>
+                    Implementing support for another language means writing a new AST extractor
+                    on top of an existing parser (Tree-sitter, TypeScript AST, Roslyn for C#,
+                    etc.). The rest of the pipeline stays the same.
+                </p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Could a model be trained directly on CodeIR instead of source code?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Speculative, but intriguing. CodeIR provides a higher signal-to-noise
+                    representation of programs: behavioral patterns, call graphs, domain
+                    classification, and inheritance hierarchies — all extracted mechanically
+                    and presented in a compact, consistent format.
+                </p>
+                <p>
+                    A model trained on Behavior-level IR alongside source might develop stronger
+                    architectural reasoning than one trained on source alone. The IR encodes
+                    exactly the kind of structural relationships that current models struggle to
+                    extract from raw syntax. Whether this translates to better downstream
+                    performance is an open research question.
+                </p>
+                <p>
+                    Let's talk.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    </main>
+
+    <script>
+function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const answer = item.querySelector('.faq-answer');
+    const arrow = btn.querySelector('.faq-arrow');
+    const isOpen = item.classList.toggle('faq-open');
+
+    if (isOpen) {
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        arrow.innerHTML = '&#9652;';
+    } else {
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        answer.offsetHeight;
+        answer.style.maxHeight = '';
+        arrow.innerHTML = '&#9662;';
+    }
+}
+
+// Remove max-height cap after expand completes
+document.querySelectorAll('.faq-answer').forEach(el => {
+    el.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'max-height' && el.closest('.faq-item').classList.contains('faq-open')) {
+            el.style.maxHeight = 'none';
+        }
+    });
+});
+    </script>
+</body>
+</html>

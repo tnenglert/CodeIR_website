@@ -1,0 +1,2810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeIR: Compiling for AI Reasoning</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="hero-header">
+        <div class="hero-overlay">
+            <h1>CodeIR</h1>
+            <p>Source code is for humans. IR is for machines.</p>
+        </div>
+       
+        </header>
+
+        <!-- hamburger menu -->
+        <div class="menu-wrapper">
+          <button class="menu-btn" onclick="document.querySelector('.menu-dropdown').classList.toggle('menu-open')">
+              <span></span>
+              <span></span>
+              <span></span>
+          </button>
+          <nav class="menu-dropdown">
+              <a href="#">Home</a>
+              <a href="faq.html">FAQ</a>
+              <a href="contact.html">Contact</a>
+          </nav>
+      </div>
+
+    <main class="container">
+
+      <!-- ____________________________________Section 1______________________________-->
+        <section class="layered-content">
+            <div class="l1-container">
+                <h2>LLMs Are Reading Code the Hard Way</h2>
+                <p>
+                  When Claude or GPT tries to understand a large codebase, it does something 
+                  slightly absurd: it reads files.
+                </p>
+                <p>
+                  Entire files. Thousands of lines of syntax, indentation, and formatting, 
+                  burning tokens and filling context windows. 
+                  Most of the information the LLM is taking in carries little information about how 
+                  the system actually works.
+                </p>
+                <p>
+                  Humans don’t navigate codebases this way. After a few weeks on a project, 
+                  developers stop thinking in files entirely. They think in architecture: 
+                  which modules own which responsibilities, which entities call each other, 
+                  where the system boundaries are.
+                </p>
+                <p>
+                  They only dive into source code when something specific needs to change.
+                </p>
+                <p>
+                  LLMs never get that representation.
+                  They get raw code.</p>
+                <p>
+                    
+                
+                <div class="action-bar">
+                  <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                      <span class="plus-icon">+</span> Explanation (L2)
+                  </button>
+                  <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                      <span class="plus-icon">+</span> Deep Dive (L3)
+                  </button>
+              </div>
+          </div>
+            </div>
+        
+            <div class="l2-container hidden-layer">
+                <div class="depth-tag-L2">Level 2: The Mechanics</div>
+                <p>
+                    The problem isn't just volume - it's about what kind of information fills the context window. 
+                    Consider what a transformer actually processes when it sees a Python function:
+                </p>
+                <pre><code>def get_user_permissions(user):
+    if user.is_superuser:
+        return Permission.objects.all()</code></pre>
+                <p>
+                    To the model, this becomes roughly 30 tokens: def, get, _, user, _, permissions... and so on. 
+                    But the actual architectural information is:
+                </p>
+                <blockquote>get_user_permissions → checks user.is_superuser → queries Permission model</blockquote>
+                <p>
+                    Three facts. Everything else is syntax noise. In a typical Python file, 80% or more of tokens carry no 
+                    architectural signal. Source code is a representation optimized for human editors and machine compilers. 
+                    It was never designed for machine reasoning.
+                </p>
+                
+                <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                  <span class="plus-icon">+</span> Deep Dive (L3)
+              </button>
+          </div>
+        
+            <div class="l3-container hidden-layer">
+                <div class="depth-tag-L3">Level 3: Architecture & Benchmarks</div>
+                <p>Scale of the problem across real codebases:</p>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Repository</th>
+                            <th>Files</th>
+                            <th>Entities</th>
+                            <th>Raw tokens (est.)</th>
+                            <th>Index-level tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Flask</td>
+                            <td>83</td>
+                            <td>1,629</td>
+                            <td>[TODO]</td>
+                            <td>[TODO]</td>
+                        </tr>
+                        <tr>
+                            <td>Django</td>
+                            <td>2,894</td>
+                            <td>41,819</td>
+                            <td>[TODO]</td>
+                            <td>[TODO]</td>
+                        </tr>
+                        <tr>
+                            <td>Tryton</td>
+                            <td>2,375</td>
+                            <td>20,457</td>
+                            <td>[TODO]</td>
+                            <td>[TODO]</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>
+                    At Index representation, CodeIR fits ~20,000 entities per 200k context window.
+                    Raw source fits roughly 200 entities in the same space. The compression ratio
+                    improves with repository size as structural redundancy collapses - larger
+                    codebases have proportionally more repeated patterns that compress well.
+                </p>
+            </div>
+        </section>
+      <!-- ____________________________________Section 2______________________________-->
+      <section class="layered-content">
+        <div class="l1-container">
+            <h2>What Happens When the Model Actually Understands the System</h2>
+            <p>
+              I asked Claude how to handle tax rates that change mid-period 
+              in Tryton's reporting module.
+              Two runs: baseline Claude, and CodeIR-enabled Claude.
+            </p>
+            <p>
+              The baseline proposed a reasonable fix. It was also wrong. It 
+              patched the symptom of a deeper architectural gap. Claude with CodeIR
+               traced the system deeper and discovered the real problem, then 
+              proposed a fundamentally different fix.  
+         
+        
+            </p>
+            One plan patched the report.
+          </p>
+          <p>
+            The other fixed the system.
+          </p>
+          
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+    
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Mechanics</div>
+
+            <h4>What the baseline missed</h4>
+            <p>
+                Tryton's architecture doesn't store historical tax rates. The baseline plan
+                assumes that if we know the date of the invoice and the tax code, we can
+                "guess" the rate by looking at the Tax configuration. It relies on
+                "time-of-report" logic.
+            </p>
+            <p>
+                If someone changes a tax rate in the settings retroactively, your historical
+                reports might change unexpectedly because the "detection helper" finds the
+                new rate instead of the one used a year ago.
+            </p>
+            <p>
+                The baseline didn't catch this because it couldn't see it. It was reading
+                individual files and reasoning about the code in front of it. The absence
+                of a rate history model isn't visible in any single file. It's a structural
+                gap in the architecture - something you can only see when you can see the
+                whole system at once.
+            </p>
+
+            <h4>What CodeIR found</h4>
+            <p>
+                The architecture itself was missing a rate history model. Using this fix
+                would allow the user to prove exactly which rate version was applied to a
+                specific invoice in 2024, even if the rate changed five times since then.
+            </p>
+            <p>
+                The SQL queries in reports become simpler because the rate_version is
+                already stamped on the TaxLine. This real fix required a schema change,
+                a migration, and new entity relationships - not a reporting patch.
+            </p>
+            <p>
+                CodeIR's model identified this because it had the architectural map.
+                It could see what the system <em>didn't</em> have, not just what it did.
+            </p>
+            
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+    
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Case Study: Tryton Tax Reporting Refactor</div>
+
+            <p>
+                I asked Claude Opus to plan a refactor of Tryton's tax reporting module.
+                The task: split period aggregation at rate-change boundaries so mid-period
+                tax rate changes produce correct subtotals. Same prompt both times, once
+                without CodeIR and once with it.
+            </p>
+            <p>Tryton is 2,375 files and 20,457 entities.</p>
+
+            <h4>Results</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Run</th>
+                        <th>Input tokens</th>
+                        <th>Output tokens</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Baseline (no CodeIR)</td>
+                        <td>385,760</td>
+                        <td>2,744</td>
+                    </tr>
+                    <tr>
+                        <td>CodeIR</td>
+                        <td>1,285,335</td>
+                        <td>5,100</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>CodeIR used 3.3x more tokens. It also produced the only correct plan.</strong></p>
+
+            <h4>What happened</h4>
+            <p>
+                Both runs identified the right files and the right general problem. Both
+                proposed phased implementations with reasonable structure. At a glance,
+                both look competent. The difference is architectural.
+            </p>
+            <p>
+                The CodeIR run explored the data model in depth. It inspected Tax, TaxLine,
+                InvoiceLine._compute_taxes, and traced how rates flow through the system.
+                It discovered that Tax.rate is a single mutable value with no history.
+                Based on that, it proposed a new TaxRateVersion model that stores rate
+                changes over time and links each TaxLine to the version used at computation
+                time. Transactions remember the exact rate applied. Reports group by version.
+            </p>
+            <p>
+                The baseline run read reporting_tax.py, the tax model, and the move line
+                structure. It proposed detecting rate changes and splitting reporting
+                periods into sub-periods, computing separate subtotals per rate window.
+                It keeps the existing schema and reconstructs the rate history at report time.
+            </p>
+
+            <h4>Why this matters</h4>
+            <p>
+                The baseline plan has a fatal flaw. It assumes you can reconstruct which
+                rate applied to a past transaction. You can't. Tax.rate is a single value.
+                When it changes from 21% to 22%, the old value is gone. January invoices
+                computed at 21% now live in a system that only knows about 22%. The
+                baseline plan will misreport those invoices or attempt date-based inference
+                that breaks on edits.
+            </p>
+            <p>
+                The CodeIR plan avoids this entirely. Each transaction stores which rate
+                version was used. Historical data is never dependent on mutable configuration.
+                This is standard practice in production accounting systems.
+            </p>
+            <p>
+                <strong>One plan is a data model fix. The other is a reporting patch that
+                produces incorrect results after rate edits.</strong> In an accounting
+                system, that distinction matters.
+            </p>
+
+            <h4>Why the token difference is the wrong metric</h4>
+            <p>
+                CodeIR used 3.3x more tokens because it explored more of the codebase. It
+                traced across module boundaries, inspected entity relationships, and built
+                a structural understanding of how rates flow through computation into
+                storage. That exploration is what revealed that Tax.rate has no history,
+                which is the insight that makes the entire plan correct.
+            </p>
+            <p>The baseline saved tokens by reading fewer files. It proposed a plan faster. The plan was wrong.</p>
+
+            <h4>Takeaway</h4>
+            <p>
+                On architectural planning tasks, CodeIR changes the depth of exploration,
+                not just the cost. The agent follows more connections, inspects more
+                relationships, and discovers structural constraints that surface-level
+                file reading misses. The result is plans grounded in how the system
+                actually works, not how it appears from skimming one module.
+            </p>
+            <p><em>Global Optimizations cost more tokens than Local Optimizations. Sometimes that's the point.</em></p>
+
+            <hr>
+
+            <h3>Baseline Plan</h3>
+            <h4>Refactoring Plan: Rate-Change-Aware Tax Reporting</h4>
+
+            <h5>Problem Summary</h5>
+            <p>
+                The current reporting_tax.py aggregates tax amounts for a fiscal period
+                without distinguishing between different effective rates. When a tax rate
+                changes mid-period (e.g., VAT increases from 21% to 22% on July 1st),
+                the report uses a single rate for display, causing:
+            </p>
+            <ol>
+                <li>Incorrect rate display in AEAT forms</li>
+                <li>No separation of subtotals by effective rate</li>
+                <li>Potential compliance issues for mid-period rate changes</li>
+            </ol>
+
+            <h5>Affected Areas</h5>
+<pre>┌─────────────────────────────────────────┬────────────────────────────────────────────────────────────────┐
+│                Component                │                             Issue                              │
+├─────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ AEAT303.get_context() (lines 262-279)   │ Takes first matching rate; ignores rate-change boundaries      │
+├─────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ ESVATList.table_query() (lines 494-504) │ Quarterly splits use calendar months, not rate-effective dates │
+├─────────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
+│ ESVATBook.table_query()                 │ Groups by tax ID but doesn't split by rate version             │
+└─────────────────────────────────────────┴────────────────────────────────────────────────────────────────┘</pre>
+
+            <h5>Proposed Solution</h5>
+            <p>
+                <strong>Core Strategy:</strong> Modify aggregation queries to GROUP BY the
+                effective tax rate (or tax version ID), then report separate subtotals
+                per rate within each period.
+            </p>
+
+            <h5>Phase 1: Data Model Extension</h5>
+            <p>File: <code>modules/account_es/reporting_tax.py</code> (or new helper module)</p>
+<pre><code>def get_rate_periods(tax_code, start_date, end_date):
+    """Return list of (rate, effective_start, effective_end) tuples
+    for a tax code within the given period."""
+    # Query Tax records matching the code with overlapping date ranges
+    # Sort by start_date and compute effective boundaries
+
+def split_period_by_rate_changes(periods, tax_codes):
+    """Given periods and tax codes, return sub-periods split at
+    every rate-change date."""</code></pre>
+
+            <h5>Phase 2: Modify AEAT303 Aggregation</h5>
+            <p>File: <code>modules/account_es/reporting_tax.py</code>, class AEAT303</p>
+            <ol>
+                <li>Refactor get_context() to detect if multiple rates exist for the period</li>
+                <li>If rate changes exist, compute separate subtotals for each rate-effective sub-period</li>
+                <li>Structure amounts as <code>{code: [(rate1, amount1), (rate2, amount2)]}</code></li>
+            </ol>
+
+            <h5>Phase 3: Modify SQL Queries</h5>
+            <p>Target: <code>ESVATList.table_query()</code> and <code>ESVATBook.table_query()</code></p>
+<pre><code>-- Current grouping:
+GROUP BY invoice.tax_identifier, tax.es_vat_list_code, ...
+
+-- Proposed grouping:
+GROUP BY invoice.tax_identifier, tax.es_vat_list_code, tax.rate, ...</code></pre>
+
+            <h5>Implementation Order</h5>
+<pre>┌──────┬───────────────────────────────────────────────────┬──────────────────────┐
+│ Step │                       Task                        │ Estimated Complexity │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 1    │ Add get_rate_periods() helper                     │ Low                  │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 2    │ Write unit tests for rate-period detection        │ Low                  │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 3    │ Refactor AEAT303.get_context() for rate awareness │ Medium               │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 4    │ Update ESVATList.table_query() GROUP BY           │ Medium               │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 5    │ Update ESVATBook.table_query() GROUP BY           │ Medium               │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 6    │ Modify report templates                           │ Low                  │
+├──────┼───────────────────────────────────────────────────┼──────────────────────┤
+│ 7    │ Integration tests with rate-change fixtures       │ Medium               │
+└──────┴───────────────────────────────────────────────────┴──────────────────────┘</pre>
+
+            <h5>Key Considerations</h5>
+            <ol>
+                <li><strong>Backward compatibility:</strong> Existing reports without rate changes should produce identical output</li>
+                <li><strong>Performance:</strong> Adding rate to GROUP BY increases result rows; consider pagination</li>
+                <li><strong>Edge cases:</strong> Rate changes on period boundaries, multiple changes per period, taxes with start_date = None</li>
+                <li><strong>AEAT compliance:</strong> Verify official forms accept multiple rows per tax code</li>
+            </ol>
+
+            <hr>
+
+            <h3>CodeIR-Enabled Plan</h3>
+            <h4>Refactoring Plan: Mid-Period Tax Rate Changes</h4>
+
+            <h5>Current Problem</h5>
+            <ol>
+                <li>Tax.rate is a single value - when changed, no history is retained</li>
+                <li>TaxLine stores only the computed amount, not the rate used at computation time</li>
+                <li>Reporting groups by tax.id, so all transactions are aggregated regardless of effective rate</li>
+            </ol>
+
+            <h5>Proposed Solution: Three-Part Refactor</h5>
+
+            <h5>Part 1: Add TaxRateVersion Model</h5>
+            <p>File: <code>modules/account/tax.py</code></p>
+<pre><code>class TaxRateVersion(ModelSQL, ModelView):
+    __name__ = 'account.tax.rate.version'
+    tax = fields.Many2One('account.tax', "Tax", required=True, ondelete='CASCADE')
+    rate = fields.Numeric("Rate", digits=(None, 10))
+    amount = fields.Numeric("Amount", digits=(None, 8))
+    start_date = fields.Date("Start Date", required=True)
+    end_date = fields.Date("End Date")
+
+    @classmethod
+    def get_effective_version(cls, tax, date):
+        """Return the rate version effective on the given date."""
+        # Query for version where start_date <= date
+        # and (end_date is null or end_date >= date)</code></pre>
+            <p>Migration: Seed initial TaxRateVersion records from current Tax.rate/Tax.amount values.</p>
+
+            <h5>Part 2: Extend TaxLine to Track Rate Version</h5>
+            <p>File: <code>modules/account/tax.py</code></p>
+<pre><code>class TaxLine(ModelSQL, ModelView):
+    # ... existing fields ...
+    rate_version = fields.Many2One(
+        'account.tax.rate.version', "Rate Version",
+        ondelete='RESTRICT',
+        help="The rate version effective when this tax was computed")
+
+    effective_rate = fields.Function(
+        fields.Numeric("Effective Rate", digits=(None, 10)),
+        'get_effective_rate')</code></pre>
+            <p>Modify <code>InvoiceLine._compute_taxes</code> and <code>Tax._process_tax</code> to look up and store rate_version.</p>
+
+            <h5>Part 3: Refactor Reporting Aggregation</h5>
+            <p>File: <code>modules/account_es/reporting_tax.py</code></p>
+<pre><code>def table_query(cls):
+    rate_version = pool.get('account.tax.rate.version').__table__()
+    query = (tax_line
+        .join(tax, condition=tax_line.tax == tax.id)
+        .join(rate_version, condition=tax_line.rate_version == rate_version.id)
+        .select(
+            rate_version.rate.as_('effective_rate'),
+            rate_version.start_date.as_('rate_effective_from'),
+            group_by=[
+                # ... existing ...
+                rate_version.id,  # KEY CHANGE: split by rate version
+            ]))</code></pre>
+
+            <h5>Impact Analysis</h5>
+<pre>┌─────────────────────────────┬────────────────────────────────────────────┬────────────────────────────────┐
+│           Module            │                   Change                   │              Risk              │
+├─────────────────────────────┼────────────────────────────────────────────┼────────────────────────────────┤
+│ account/tax.py              │ Add TaxRateVersion model, extend TaxLine   │ Medium - schema migration      │
+├─────────────────────────────┼────────────────────────────────────────────┼────────────────────────────────┤
+│ account_invoice/invoice.py  │ Update _compute_taxes to use rate versions │ Low - isolated change          │
+├─────────────────────────────┼────────────────────────────────────────────┼────────────────────────────────┤
+│ account_es/reporting_tax.py │ Update aggregation queries                 │ Medium - changes report output │
+├─────────────────────────────┼────────────────────────────────────────────┼────────────────────────────────┤
+│ Tests                       │ Add tests for mid-period rate changes      │ Low                            │
+└─────────────────────────────┴────────────────────────────────────────────┴────────────────────────────────┘</pre>
+
+            <h5>Alternative Approaches Considered</h5>
+            <ol>
+                <li><strong>Just store rate on TaxLine</strong> - Simpler but loses ability to audit when rates changed</li>
+                <li><strong>Use Tryton's _history = True</strong> - Too broad; tracks all field changes</li>
+                <li><strong>Create new Tax records per rate change</strong> - Would break existing references</li>
+            </ol>
+
+            <h5>Questions for Alignment</h5>
+            <ol>
+                <li>Should rate versions be editable, or append-only once transactions exist?</li>
+                <li>Should reports show separate rows per rate, or one row with multiple columns?</li>
+                <li>Is there an existing module that partially addresses this we should extend?</li>
+            </ol>
+       
+        <div class="terminal-comparison">
+          <div class="terminal-window">
+              <div class="terminal-header">
+                  <span class="terminal-dot red"></span>
+                  <span class="terminal-dot yellow"></span>
+                  <span class="terminal-dot green"></span>
+                  <span class="terminal-label">Without CodeIR</span>
+              </div>
+              <div class="terminal-body">
+                  <pre><code> I'll first locate and examine the reporting_tax.py module to understand the current implementation.
+
+⏺ Search(pattern: "/reporting_tax.py")**
+  ⎿ Found 1 file (ctrl+o to expand)
+                    
+⏺ Read(modules/account_es/reporting_tax.py)
+  ⎿ Read 981 lines
+                    
+⏺ Let me also examine the tax model structure to understand how rate changes are stored.
+                    
+⏺ Search(pattern: "class Tax(|start_date|end_date|rate")
+  ⎿ Found 185 lines (ctrl+o to expand)
+                    
+⏺ Search(pattern: "/account/tax.py")**
+  ⎿ Found 1 file (ctrl+o to expand)
+                    
+⏺ Let me check the move/move line structure to understand how transaction dates are stored.
+                    
+⏺ Search(pattern: "class MoveLine|class Move(|^ date\s=")*
+  ⎿ Found 31 lines (ctrl+o to expand)
+                    
+∴ Thinking…
+                    
+Now I understand the full picture:
+                    
+Move has a date field (effective date)
+                    
+MoveLine has a function field date that gets it from the move
+                    
+Tax has start_date, end_date, and rate fields
+                    
+TaxLine links to a Tax and records amounts
+
+The issue in reporting_tax.py:
+
+When computing AEAT303, the code fetches TaxCodeLines and for each one, takes line.tax.rate (a single rate).
+
+But if a tax changed rates mid-period (e.g., VAT went from 21% to 22% on July 1st), there would be two Tax records—one effective until June 30, one from July 1st.
+
+The current code doesn't split the aggregation by effective rate period.
+
+Now I can propose a comprehensive plan.
+
+⏺ Now I have a complete picture. Let me propose a refactoring plan.</code></pre>
+              </div>
+          </div>
+          <div class="terminal-window">
+              <div class="terminal-header">
+                  <span class="terminal-dot red"></span>
+                  <span class="terminal-dot yellow"></span>
+                  <span class="terminal-dot green"></span>
+                  <span class="terminal-label">With CodeIR</span>
+              </div>
+              <div class="terminal-body">
+                  <pre><code>I'll explore the tax reporting module to understand the current implementation before proposing a plan.
+
+⏺ Bash(codeir search "reporting_tax" --repo-path .)
+⎿    AT111                 AEAT111                                   modules/account_es/reporting_tax.py:208  [class]
+  GTCNTXT.13            AEAT111.get_context                       modules/account_es/reporting_tax.py:213  [method]
+  AT115                 AEAT115                                   modules/account_es/reporting_tax.py:226  [class]
+  GTCNTXT.14            AEAT115.get_context                       modules/account_es/reporting_tax.py:231  [method]
+  AT303                 AEAT303                                   modules/account_es/reporting_tax.py:240  [class]
+  CMPTMNTS.02           AEAT303.compute_amounts                   modules/account_es/reporting_tax.py:245  [method]
+  GTCNTXT.15            AEAT303.get_context                       modules/account_es/reporting_tax.py:251  [method]
+  AT347                 AEAT347                                   modules/account_es/reporting_tax.py:536  [class]
+  GTCNTXT.16            AEAT347.get_context                       modules/account_es/reporting_tax.py:540  [method]
+  FRMTDCML.02           AEAT347.get_context.format_decimal        modules/account_es/reporting_tax.py:554  [method]
+  AT349                 AEAT349                                   modules/account_es/reporting_tax.py:665  [class]
+  GTCNTXT.17            AEAT349.get_context                       modules/account_es/reporting_tax.py:669  [method]
+  FRMTDCML.03           AEAT349.get_context.format_decimal        modules/account_es/reporting_tax.py:704  [method]
+  ATPRTYRPRT            AEATPartyReport                           modules/account_es/reporting_tax.py:129  [class]
+  ATPRTYXPRSSN          AEATPartyReport.aeat_party_expression     modules/account_es/reporting_tax.py:132  [method]
+  GTCNTXT.12            AEATPartyReport.get_context               modules/account_es/reporting_tax.py:157  [method]
+  ATRPRT                AEATReport                                modules/account_es/reporting_tax.py:88  [class]
+  CMPTMNTS              AEATReport.compute_amounts                modules/account_es/reporting_tax.py:116  [method]
+  GTCNTXT.11            AEATReport.get_context                    modules/account_es/reporting_tax.py:91  [method]
+  TXCDS                 AEATReport.tax_codes                      modules/account_es/reporting_tax.py:123  [method]
+  ECPRTNLST             ECOperationList                           modules/account_es/reporting_tax.py:567  [class]
+  TBLQRY.07             ECOperationList.table_query               modules/account_es/reporting_tax.py:571  [method]
+  ECPRTNLSTCNTXT        ECOperationListContext                    modules/account_es/reporting_tax.py:634  [class]
+  DFLTNDDT.02           ECOperationListContext.default_end_date   modules/account_es/reporting_tax.py:659  [method]
+  DFLTSTRTDT.04         ECOperationListContext.default_start_date  modules/account_es/reporting_tax.py:653  [method]
+  ESVTBK                ESVATBook                                 modules/account_es/reporting_tax.py:759  [class]
+  GTCRRNCY.12           ESVATBook.get_currency                    modules/account_es/reporting_tax.py:887  [method]
+  INCLDDTXGRPS          ESVATBook.included_tax_groups             modules/account_es/reporting_tax.py:784  [method]
+  TBLQRY.08             ESVATBook.table_query                     modules/account_es/reporting_tax.py:805  [method]
+  ESVTBKCNTXT           ESVATBookContext                          modules/account_es/reporting_tax.py:712  [class]
+  DFLTCMPNY.29          ESVATBookContext.default_company          modules/account_es/reporting_tax.py:744  [method]
+  DFLTSVTBKTYP          ESVATBookContext.default_es_vat_book_type  modules/account_es/reporting_tax.py:740  [method]
+  DFLTFSCLYR.05         ESVATBookContext.default_fiscalyear       modules/account_es/reporting_tax.py:748  [method]
+  ESVTLST               ESVATList                                 modules/account_es/reporting_tax.py:392  [class]
+  EXCLDDTXCDS           ESVATList.excluded_tax_codes              modules/account_es/reporting_tax.py:424  [method]
+  GTPRVNCCD             ESVATList.get_province_code               modules/account_es/reporting_tax.py:415  [method]
+  SRCHPRVNCCD           ESVATList.search_province_code            modules/account_es/reporting_tax.py:420  [method]
+  TBLQRY.06             ESVATList.table_query                     modules/account_es/reporting_tax.py:428  [method]
+  ESVTLSTCNTXT          ESVATListContext                          modules/account_es/reporting_tax.py:518  [class]
+  DFLTCMPNY.28          ESVATListContext.default_company          modules/account_es/reporting_tax.py:526  [method]
+  DFLTDT.11             ESVATListContext.default_date             modules/account_es/reporting_tax.py:530  [method]
+  PRNTT                 PrintAEAT                                 modules/account_es/reporting_tax.py:351  [class]
+  OPNRPRT               PrintAEAT.open_report                     modules/account_es/reporting_tax.py:369  [method]
+  TRNSTNCHC             PrintAEAT.transition_choice               modules/account_es/reporting_tax.py:363  [method]
+  VLDT303               PrintAEAT.validate_303                    modules/account_es/reporting_tax.py:385  [method]
+  PRNTTSTRT             PrintAEATStart                            modules/account_es/reporting_tax.py:320  [class]
+  DFLTCMPNY.27          PrintAEATStart.default_company            modules/account_es/reporting_tax.py:347  [method]
+  VTBKRPRT              VATBookReport                             modules/account_es/reporting_tax.py:891  [class]
+  CNVRT                 VATBookReport.convert                     modules/account_es/reporting_tax.py:907  [method]
+  FRMTDCML.04           VATBookReport.format_decimal              modules/account_es/reporting_tax.py:918  [method]
+
+⏺ Search(pattern: "**/*reporting_tax*.py", path: "tryton-main")
+  ⎿  Found 1 file (ctrl+o to expand)
+
+⏺ Bash(codeir search "tax rate" --repo-path . 2>/dev/null | head -40)
+  ⎿    RVRSRTMNT             Tax._reverse_rate_amount                  modules/account/tax.py:1024  [method]
+        DFLTSPPLRTXSDDCTBLRT  Category.default_supplier_taxes_deductible_rate  modules/account_product/product.py:185  [method]
+        SPPLRTXSDDCTBLRTSD    Category.supplier_taxes_deductible_rate_used  modules/account_product/product.py:257  [method]
+        DFLTTXSDDCTBLRT       InvoiceLine.default_taxes_deductible_rate  modules/account_invoice/invoice.py:2734  [method]
+        SPPLRTXSDDCTBLRTSD.02  Template.supplier_taxes_deductible_rate_used  modules/account_product/product.py:393  [method]
+        TAX.03                Tax                                       modules/account_es_sii/account.py:137  [class]
+        TAX.04                Tax                                       modules/account_eu/account.py:26  [class]
+        TAX.02                Tax                                       modules/account_es/account.py:85  [class]
+        TAX.07                Tax                                       modules/account_tax_non_deductible/account.py:27  [class]
+        TAX.06                Tax                                       modules/account_tax_cash/account.py:97  [class]
+        TAX.05                Tax                                       modules/account_export_winbooks/account.py:165  [class]
+        TAX                   Tax                                       modules/account/tax.py:743  [class]
+        TAX.09                Tax                                       modules/edocument_unece/account.py:8  [class]
+        AMNTDMN.02            Tax._amount_domain                        modules/account_tax_cash/account.py:112  [method]
+        AMNTDMN               Tax._amount_domain                        modules/account/tax.py:962  [method]
+        AMNTWHR.02            Tax._amount_where                         modules/account_tax_cash/account.py:101  [method]
+        AMNTWHR               Tax._amount_where                         modules/account/tax.py:953  [method]
+        GRPTXS                Tax._group_taxes                          modules/account/tax.py:996  [method]
+        PRCSSTX               Tax._process_tax                          modules/account/tax.py:980  [method]
+        RVRSNTCMPT            Tax._reverse_unit_compute                 modules/account/tax.py:1045  [method]
+        UNTCMPT               Tax._unit_compute                         modules/account/tax.py:1001  [method]
+        CHCKPDTNTPRC.02       Tax.check_update_unit_price               modules/account/tax.py:856  [method]
+        CMPT                  Tax.compute                               modules/account/tax.py:1078  [method]
+        COPY.07               Tax.copy                                  modules/account/tax.py:972  [method]
+        DFLTCMPNY.21          Tax.default_company                       modules/account/tax.py:874  [method]
+        DFLTSXCLDFRMVTBK.02   Tax.default_es_exclude_from_vat_book      modules/account_es/account.py:110  [method]
+        DFLTNNDDCTBL.02       Tax.default_non_deductible                modules/account_tax_non_deductible/account.py:33  [method]
+        DFLTTMPLTVRRD.04      Tax.default_template_override             modules/account/tax.py:878  [method]
+        DFLTTYP.04            Tax.default_type                          modules/account/tax.py:866  [method]
+        DFLTPDTNTPRC.02       Tax.default_update_unit_price             modules/account/tax.py:870  [method]
+        GTMNT.04              Tax.get_amount                            modules/account/tax.py:882  [method]
+        ONCHNGWTHCRRNCY.03    Tax.on_change_with_currency               modules/account/tax.py:968  [method]
+        RVRSCMPT              Tax.reverse_compute                       modules/account/tax.py:1095  [method]
+        SRTTXS                Tax.sort_taxes                            modules/account/tax.py:1069  [method]
+        KEY                   Tax.sort_taxes.key                        modules/account/tax.py:1073  [method]
+        UPDTTX.02             Tax.update_tax                            modules/account_es/account.py:114  [method]
+        UPDTTX                Tax.update_tax                            modules/account/tax.py:1103  [method]
+        VLDTFLDS.07           Tax.validate_fields                       modules/account/tax.py:851  [method]
+        TXCD.02               TaxCode                                   modules/account_es/account.py:25  [class]
+        TXCD                  TaxCode                                   modules/account/tax.py:125  [class]
+
+⏺ Bash(codeir search "TaxLine" --repo-path . 2>/dev/null | head -30)
+  ⎿    TXLN.04               TaxLine                                   modules/account_tax_cash/account.py:125  [class]
+        TXLN.03               TaxLine                                   modules/account_export_winbooks/account.py:177  [class]
+        TXLN.02               TaxLine                                   modules/account/tax.py:1337  [class]
+        RGSTR.09              TaxLine.__register__                      modules/account/tax.py:1364  [method]
+        STP.166               TaxLine.__setup__                         modules/account_tax_cash/account.py:138  [method]
+        STP.68                TaxLine.__setup__                         modules/account_export_winbooks/account.py:181  [method]
+        STP.41                TaxLine.__setup__                         modules/account/tax.py:1359  [method]
+        CHCKMDFCTN.09         TaxLine.check_modification                modules/account/tax.py:1428  [method]
+        DFLTNCSHBSS           TaxLine.default_on_cash_basis             modules/account_tax_cash/account.py:156  [method]
+        GTRCNM.08             TaxLine.get_rec_name                      modules/account/tax.py:1413  [method]
+        GRPCSHBSSKY           TaxLine.group_cash_basis_key              modules/account_tax_cash/account.py:167  [method]
+        ONCHNGWTHCMPNY.04     TaxLine.on_change_with_company            modules/account/tax.py:1409  [method]
+        ONCHNGWTHCRRNCY.04    TaxLine.on_change_with_currency           modules/account/tax.py:1405  [method]
+        PRDCHCKD.02           TaxLine.period_checked                    modules/account_tax_cash/account.py:160  [method]
+        PRDCHCKD              TaxLine.period_checked                    modules/account/tax.py:1424  [method]
+        SRCHRCNM.09           TaxLine.search_rec_name                   modules/account/tax.py:1420  [method]
+        UPDTCSHBSS            TaxLine.update_cash_basis                 modules/account_tax_cash/account.py:176  [method]
+        TXLNTMPLT             TaxLineTemplate                           modules/account/move_template.py:287  [class]
+        STP.34                TaxLineTemplate.__setup__                 modules/account/move_template.py:307  [method]
+        GTLN.02               TaxLineTemplate.get_line                  modules/account/move_template.py:311  [method]
+        TXLN                  _TaxLine                                  modules/account/tax.py:1178  [class]
+        ADD                   _TaxLine.__add__                          modules/account/tax.py:1193  [method]
+        IADD                  _TaxLine.__iadd__                         modules/account/tax.py:1202  [method]
+        INIT.02               _TaxLine.__init__                         modules/account/tax.py:1181  [method]
+        KEY.02                _TaxLine._key                             modules/account/tax.py:1190  [method]
+        VLS                   _TaxLine.values                           modules/account/tax.py:1185  [method]
+
+                                                                                                                12:49 PM claude-opus-4-5-20251101
+⏺ Let me examine the core tax module and the reporting structure more closely.
+
+⏺ Bash(codeir show TAX --repo-path . --level Behavior 2>/dev/null)
+  ⎿  Entity: Tax  [class]
+      File:   modules/account/tax.py:743
+      Level:  Behavior
+
+      CLS TAX C=AccessError,Bool,Boolean,Case,Char,Date F=EILR A=109 B=DeactivableMixin,ModelSQL,ModelView #CORE
+
+⏺ Bash(codeir show TBLQRY.08 --repo-path . --level Behavior 2>/dev/null)
+  ⎿  Entity: ESVATBook.table_query  [method]
+      File:   modules/account_es/reporting_tax.py:805
+      Level:  Behavior
+
+      MT TBLQRY.08 C=Coalesce,CurrentTimestamp,Exists,Literal,Min,Period F=IR A=27 #PARSE #CORE
+
+⏺ Bash(codeir search "TaxRuleLineTemplate period" --repo-path . 2>/dev/null | head -20)
+  ⎿    TXRLLNTMPLT.02        TaxRuleLineTemplate                       modules/account_tax_rule_country/account.py:61  [class]
+        TXRLLNTMPLT           TaxRuleLineTemplate                       modules/account/tax.py:1575  [class]
+        STP.42                TaxRuleLineTemplate.__setup__             modules/account/tax.py:1623  [method]
+        GTTXRLLNVL.02         TaxRuleLineTemplate._get_tax_rule_line_value  modules/account_tax_rule_country/account.py:64  [method]
+        GTTXRLLNVL            TaxRuleLineTemplate._get_tax_rule_line_value  modules/account/tax.py:1628  [method]
+        CRTRLLN               TaxRuleLineTemplate.create_rule_line      modules/account/tax.py:1648  [method]
+        PRDDLT.03             Abstract._period_delta                    modules/sale/sale_reporting.py:192  [method]
+        PRDDLT.04             Abstract._period_delta                    modules/sale_opportunity/opportunity_reporting.py:197  [method]
+        PRDDLT.02             Abstract._period_delta                    modules/purchase/purchase_reporting.py:121  [method]
+        PRDDLT.05             Abstract._period_delta                    modules/stock/stock_reporting_margin.py:208  [method]
+        TSTCHNGFSCLYRDTSWTHPRDS  AccountTestCase.test_change_fiscalyear_dates_with_periods  modules/account/tests/test_module.py:304  [method]
+        TSTCHNGPRDDTSWTHMV    AccountTestCase.test_change_period_dates_with_move  modules/account/tests/test_module.py:325  [method]
+        TSTFSCLYRCRTPRDS      AccountTestCase.test_fiscalyear_create_periods  modules/account/tests/test_module.py:227  [method]
+        ACTVPRDMXN            ActivePeriodMixin                         modules/account/common.py:66  [class]
+        ACTVDTS               ActivePeriodMixin._active_dates           modules/account/common.py:71  [method]
+        DFLTCTV               ActivePeriodMixin.default_active          modules/account/common.py:112  [method]
+        DMNCTV                ActivePeriodMixin.domain_active           modules/account/common.py:125  [method]
+        ONCHNGWTHCTV          ActivePeriodMixin.on_change_with_active   modules/account/common.py:116  [method]
+        PRDDLT                Agent._period_delta                       modules/commission/commission_reporting.py:127  [method]
+        CRTPRD.02             BudgetLine.create_period                  modules/account_budget/account.py:589  [method]
+
+⏺ Bash(codeir expand TAX --repo-path . 2>/dev/null | head -100)
+  ⎿  Entity: Tax  [class]
+      File:   modules/account/tax.py:743-1175
+
+      class Tax(sequence_ordered(), ModelSQL, ModelView, DeactivableMixin):
+          """Type:
+                percentage: tax = price * rate
+                fixed: tax = amount
+                none: tax = none"""
+          __name__ = 'account.tax'
+          _states = {
+              'readonly': (Bool(Eval('template', -1))
+                  & ~Eval('template_override', False)),
+              }
+          name = fields.Char('Name', required=True, states=_states)
+          description = fields.Char('Description', required=True, translate=True,
+                  help="The name that will be used in reports.", states=_states)
+          group = fields.Many2One('account.tax.group', 'Group',
+              states={
+                  'invisible': Bool(Eval('parent')),
+                  'readonly': _states['readonly'],
+                  })
+          start_date = fields.Date("Start Date", states=_states)
+          end_date = fields.Date("End Date", states=_states)
+          amount = fields.Numeric(
+              "Amount", digits=(None, 8),
+              states={
+                  'required': Eval('type') == 'fixed',
+                  'invisible': Eval('type') != 'fixed',
+                  'readonly': _states['readonly'],
+                  }, help='In company\'s currency.')
+          rate = fields.Numeric(
+              "Rate", digits=(None, 10),
+              states={
+                  'required': Eval('type') == 'percentage',
+                  'invisible': Eval('type') != 'percentage',
+                  'readonly': _states['readonly'],
+                  })
+          type = fields.Selection([
+              ('percentage', 'Percentage'),
+              ('fixed', 'Fixed'),
+              ('none', 'None'),
+              ], 'Type', required=True, states=_states)
+          update_unit_price = fields.Boolean('Update Unit Price',
+              states={
+                  'invisible': Bool(Eval('parent')),
+                  'readonly': _states['readonly'],
+                  },
+              help=('If checked then the unit price for further tax computation will'
+                  ' be modified by this tax.'))
+          parent = fields.Many2One(
+              'account.tax', "Parent", ondelete='CASCADE', states=_states,
+              domain=[
+                  ('company', '=', Eval('company', -1)),
+                  ])
+          childs = fields.One2Many(
+              'account.tax', 'parent', "Children",
+              domain=[
+                  ('company', '=', Eval('company', -1)),
+                  ])
+          company = fields.Many2One('company.company', "Company", required=True)
+          invoice_account = fields.Many2One('account.account', 'Invoice Account',
+              domain=[
+                  ('company', '=', Eval('company', -1)),
+                  ('type.statement', '=', 'balance'),
+                  ('closed', '!=', True),
+                  ],
+              states={
+                  'readonly': _states['readonly'],
+                  'required': Eval('type') != 'none',
+                  })
+          credit_note_account = fields.Many2One('account.account',
+              'Credit Note Account',
+              domain=[
+                  ('company', '=', Eval('company', -1)),
+                  ('type.statement', '=', 'balance'),
+                  ('closed', '!=', True),
+                  ],
+              states={
+                  'readonly': _states['readonly'],
+                  'required': Eval('type') != 'none',
+                  })
+          legal_notice = fields.Text("Legal Notice", translate=True,
+              states=_states)
+          template = fields.Many2One('account.tax.template', 'Template',
+              ondelete='RESTRICT')
+          template_override = fields.Boolean('Override Template',
+              help="Check to override template definition",
+              states={
+                  'invisible': ~Bool(Eval('template', -1)),
+                  })
+
+          invoice_base_amount = fields.Function(Monetary(
+                  "Invoice Base Amount", currency='currency', digits='currency'),
+              'get_amount')
+          invoice_tax_amount = fields.Function(Monetary(
+                  "Invoice Tax Amount", currency='currency', digits='currency'),
+              'get_amount')
+          credit_base_amount = fields.Function(Monetary(
+                  "Credit Base Amount", currency='currency', digits='currency'),
+              'get_amount')
+
+⏺ Bash(codeir expand TBLQRY.08 --repo-path . 2>/dev/null)
+  ⎿  Entity: ESVATBook.table_query  [method]
+      File:   modules/account_es/reporting_tax.py:805-885
+
+          def table_query(cls):
+              pool = Pool()
+              Company = pool.get('company.company')
+              Invoice = pool.get('account.invoice')
+              Move = pool.get('account.move')
+              Line = pool.get('account.move.line')
+              TaxLine = pool.get('account.tax.line')
+              Period = pool.get('account.period')
+              Tax = pool.get('account.tax')
+              context = Transaction().context
+              company = Company.__table__()
+              invoice = Invoice.__table__()
+              cancel_invoice = Invoice.__table__()
+              move = Move.__table__()
+              cancel_move = Move.__table__()
+              line = Line.__table__()
+              tax_line = TaxLine.__table__()
+              period = Period.__table__()
+              tax = Tax.__table__()
+
+              where = ((invoice.company == context.get('company'))
+                  & (period.fiscalyear == context.get('fiscalyear'))
+                  & ~tax.es_exclude_from_vat_book)
+              where &= ~Exists(cancel_invoice
+                  .join(cancel_move,
+                      condition=cancel_invoice.cancel_move == cancel_move.id)
+                  .select(cancel_invoice.id, distinct=True,
+                      where=((cancel_invoice.id == invoice.id)
+                          & (~cancel_move.origin.like('account.invoice,%')))))
+              groups = cls.included_tax_groups()
+              if groups:
+                  where &= tax.group.in_(groups)
+              if context.get('start_period'):
+                  start_period = Period(context['start_period'])
+                  where &= (period.start_date >= start_period.start_date)
+              if context.get('end_period'):
+                  end_period = Period(context['end_period'])
+                  where &= (period.end_date <= end_period.end_date)
+
+              query = (tax_line
+                  .join(tax, condition=tax_line.tax == tax.id)
+                  .join(line, condition=tax_line.move_line == line.id)
+                  .join(move, condition=line.move == move.id)
+                  .join(period, condition=move.period == period.id)
+                  .join(invoice, condition=invoice.move == move.id)
+                  .join(company, condition=company.id == invoice.company)
+                  .select(
+                      Min(tax_line.id).as_('id'),
+                      Literal(0).as_('create_uid'),
+                      CurrentTimestamp().as_('create_date'),
+                      cls.write_uid.sql_cast(Literal(Null)).as_('write_uid'),
+                      cls.write_date.sql_cast(Literal(Null)).as_('write_date'),
+                      invoice.id.as_('invoice'),
+                      invoice.invoice_date.as_('invoice_date'),
+                      invoice.party.as_('party'),
+                      invoice.party_tax_identifier.as_('party_tax_identifier'),
+                      Coalesce(tax.es_reported_with, tax.id).as_('tax'),
+                      Sum(tax_line.amount,
+                          filter_=((tax_line.type == 'base')
+                              & (tax.es_reported_with == Null))).as_('base_amount'),
+                      Coalesce(
+                          Sum(tax_line.amount,
+                              filter_=((tax_line.type == 'tax')
+                                  & (tax.es_reported_with == Null))),
+                          0).as_('tax_amount'),
+                      Min(tax.id,
+                          filter_=(tax.es_reported_with != Null)).as_(
+                          'surcharge_tax'),
+                      Coalesce(Sum(tax_line.amount,
+                              filter_=((tax_line.type == 'tax')
+                                  & (tax.es_reported_with != Null))), 0).as_(
+                          'surcharge_tax_amount'),
+                      where=where,
+                      group_by=[
+                          invoice.id,
+                          invoice.party,
+                          invoice.invoice_date,
+                          invoice.party_tax_identifier,
+                          Coalesce(tax.es_reported_with, tax.id),
+                          ]))
+              return query
+
+⏺ Bash(codeir expand TXLN.02 --repo-path . 2>/dev/null)
+  ⎿  Entity: TaxLine  [class]
+      File:   modules/account/tax.py:1337-1436
+
+      class TaxLine(ModelSQL, ModelView):
+          __name__ = 'account.tax.line'
+          currency = fields.Function(fields.Many2One(
+                  'currency.currency', "Currency"),
+              'on_change_with_currency')
+          amount = Monetary(
+              "Amount", currency='currency', digits='currency', required=True)
+          type = fields.Selection([
+                  ('tax', "Tax"),
+                  ('base', "Base"),
+                  ], "Type", required=True)
+          tax = fields.Many2One(
+              'account.tax', "Tax", ondelete='RESTRICT', required=True,
+              domain=[
+                  ('company', '=', Eval('company', -1)),
+                  ])
+          move_line = fields.Many2One(
+              'account.move.line', "Move Line", required=True, ondelete='CASCADE')
+          company = fields.Function(fields.Many2One('company.company', 'Company'),
+              'on_change_with_company')
+
+          @classmethod
+          def __setup__(cls):
+              super().__setup__()
+              cls.__access__.add('move_line')
+
+          @classmethod
+          def __register__(cls, module_name):
+              pool = Pool()
+              Tax = pool.get('account.tax')
+              transaction = Transaction()
+              table = cls.__table__()
+              tax = Tax.__table__()
+
+              migrate_type = False
+              if backend.TableHandler.table_exist(cls._table):
+                  table_h = cls.__table_handler__(module_name)
+                  migrate_type = not table_h.column_exist('type')
+
+              super().__register__(module_name)
+
+              table_h = cls.__table_handler__(module_name)
+
+              # Migrate from 4.6: remove code and fill type
+              table_h.not_null_action('code', action='remove')
+              if migrate_type:
+                  # XXX base on no tax code is used for both tax and base
+                  cursor = transaction.connection.cursor()
+                  cursor.execute(*tax.select(
+                          tax.id, tax.company,
+                          tax.invoice_base_code, tax.invoice_tax_code,
+                          tax.credit_note_base_code, tax.credit_note_tax_code))
+                  update = transaction.connection.cursor()
+                  for (tax, company,
+                          invoice_base_code, invoice_tax_code,
+                          credit_note_base_code, credit_note_tax_code) in cursor:
+                      update.execute(*table.update(
+                              [table.type], ['tax'],
+                              where=(table.tax == tax)
+                              & (table.code.in_(
+                                      [invoice_tax_code, credit_note_tax_code]))))
+                      update.execute(*table.update(
+                              [table.type], ['base'],
+                              where=(table.tax == tax)
+                              & (table.code.in_(
+                                      [invoice_base_code, credit_note_base_code]))))
+
+          @fields.depends('move_line', '_parent_move_line.currency')
+          def on_change_with_currency(self, name=None):
+              return self.move_line.currency if self.move_line else None
+
+          @fields.depends('_parent_move_line.account', 'move_line')
+          def on_change_with_company(self, name=None):
+              if self.move_line and self.move_line.account:
+                  return self.move_line.account.company
+
+          def get_rec_name(self, name):
+              name = super().get_rec_name(name)
+              if self.tax:
+                  name = self.tax.rec_name
+              return name
+
+          @classmethod
+          def search_rec_name(cls, name, clause):
+              return [('tax',) + tuple(clause[1:])]
+
+          @property
+          def period_checked(self):
+              return self.move_line.period
+
+          @classmethod
+          def check_modification(cls, mode, lines, values=None, external=False):
+              super().check_modification(
+                  mode, lines, values=values, external=external)
+              for line in lines:
+                  period = line.period_checked
+                  if period and period.state != 'open':
+                      raise AccessError(gettext(
+                              'account.msg_modify_tax_line_closed_period',
+                              period=period.rec_name))
+
+⏺ Read(modules/account/tax.py)
+  ⎿  Read 150 lines
+
+⏺ Bash(codeir search "rate history version" --repo-path . 2>/dev/null | head -20)
+  ⎿    GTRQRVRSN.24          get_require_version                       modules/account_invoice_history/setup.py:22  [function]
+        GTRQRVRSN.108         get_require_version                       modules/product_cost_history/setup.py:19  [function]
+        GTRQRVRSN.150         get_require_version                       modules/sale_history/setup.py:19  [function]
+        GTRQRVRSN.131         get_require_version                       modules/purchase_history/setup.py:19  [function]
+        RTRRR                 RateError                                 modules/currency/exceptions.py:7  [class]
+        RTLMTXCPTN            RateLimitException                        trytond/trytond/exceptions.py:63  [class]
+        RTSNTVLBLRRR          RatesNotAvailableError                    modules/currency/ecb.py:28  [class]
+        GTRT.05               Abstract.get_rate                         modules/sale_opportunity/opportunity_reporting.py:176  [method]
+        ABSTRCTCNVRSN         AbstractConversion                        modules/sale_opportunity/opportunity_reporting.py:235  [class]
+        CLMNDT.07             AbstractConversion._column_date           modules/sale_opportunity/opportunity_reporting.py:280  [method]
+        CLMNS.27              AbstractConversion._columns               modules/sale_opportunity/opportunity_reporting.py:264  [method]
+        LSTSTTS               AbstractConversion._lost_states           modules/sale_opportunity/opportunity_reporting.py:289  [method]
+        OPPRTNTYSTTS          AbstractConversion._opportunity_states    modules/sale_opportunity/opportunity_reporting.py:293  [method]
+        WNSTTS                AbstractConversion._won_states            modules/sale_opportunity/opportunity_reporting.py:285  [method]
+        ABSTRCTCNVRSNTMSRS    AbstractConversionTimeseries              modules/sale_opportunity/opportunity_reporting.py:297  [class]
+        ACCNTNVCHSTRYTSTCS    AccountInvoiceHistoryTestCase             modules/account_invoice_history/tests/test_module.py:7  [class]
+        GTRT.04               Activity.get_rate                         modules/marketing_automation/marketing_automation.py:544  [method]
+        ADDRSS.02             Address                                   modules/account_invoice_history/party.py:11  [class]
+        AND.08                And                                       trytond/trytond/tools/domain_inversion.py:466  [class]
+        AND.03                And                                       tryton/tryton/common/domain_inversion.py:467  [class]
+
+⏺ Bash(codeir grep "start_date.*end_date\|rate.*change\|effective_date" --path modules/account/ -i 2>/dev/null | head -30)
+  ⎿  No matches found.
+
+⏺ Bash(codeir search "price_list price history" --repo-path . 2>/dev/null | head -20)
+  ⎿    CNFGRTN.43            Configuration                             modules/sale_price_list/configuration.py:10  [class]
+        CNFGRTNSLPRCLST       ConfigurationSalePriceList                modules/sale_price_list/configuration.py:23  [class]
+        CSTPRC                CostPrice                                 modules/product_cost_history/product.py:58  [class]
+        CRON.19               Cron                                      modules/product_price_list_cache/ir.py:7  [class]
+        STP.307               Cron.__setup__                            modules/product_price_list_cache/ir.py:11  [method]
+        FRMLRRR.02            FormulaError                              modules/product_price_list/exceptions.py:7  [class]
+        LINE.16               Line                                      modules/product_price_list_dates/purchase.py:8  [class]
+        LINE.17               Line                                      modules/product_price_list_dates/sale.py:8  [class]
+        LINE.35               Line                                      modules/sale_price_list/sale.py:53  [class]
+        LINE.25               Line                                      modules/purchase_price_list/purchase.py:19  [class]
+        STP.308               Line.__setup__                            modules/product_price_list_dates/purchase.py:12  [method]
+        STP.309               Line.__setup__                            modules/product_price_list_dates/sale.py:12  [method]
+        STP.409               Line.__setup__                            modules/sale_price_list/sale.py:57  [method]
+        STP.348               Line.__setup__                            modules/purchase_price_list/purchase.py:23  [method]
+        GTCNTXTPRCHSPRC       Line._get_context_purchase_price          modules/product_price_list_dates/purchase.py:18  [method]
+        GTCNTXTSLPRC          Line._get_context_sale_price              modules/product_price_list_dates/sale.py:18  [method]
+        GTCNTXTSLPRC.03       Line._get_context_sale_price              modules/sale_price_list/sale.py:63  [method]
+        OPNPRDCT.02           OpenProduct                               modules/sale_price_list/sale.py:71  [class]
+        CNTXT.11              OpenProduct._context                      modules/sale_price_list/sale.py:74  [method]
+        PRTY.34               Party                                     modules/sale_price_list/party.py:11  [class]
+
+⏺ Read(modules/account/tax.py)
+  ⎿  Read 50 lines
+
+⏺ Bash(codeir expand CSTPRC --repo-path . 2>/dev/null)
+  ⎿  Entity: CostPrice  [class]
+      File:   modules/product_cost_history/product.py:58-60
+
+      class CostPrice(metaclass=PoolMeta):
+          __name__ = 'product.cost_price'
+          _history = True
+
+⏺ Read(modules/account_es/reporting_tax.py)
+  ⎿  Read 90 lines
+
+⏺ Bash(codeir search "create tax_line taxline" --repo-path . 2>/dev/null | head -20)
+  ⎿    CRT.02                AccountTemplate.create_account.create     modules/account/account.py:725  [method]
+        CRT.15                ActionMixin.create                        trytond/trytond/ir/action.py:447  [method]
+        CRT.13                Database.create                           trytond/trytond/backend/postgresql/database.py:317  [method]
+        CRT.14                Database.create                           trytond/trytond/backend/sqlite/database.py:588  [method]
+        CRT.11                Database.create                           trytond-gis/trytond_gis/postgis/database.py:25  [method]
+        CRT.12                DatabaseInterface.create                  trytond/trytond/backend/database.py:41  [method]
+        CRT.03                Line.create                               modules/account/move.py:1515  [method]
+        CRT.18                Many2Many.set.create                      trytond/trytond/model/fields/many2many.py:215  [method]
+        CRT.21                ModelSQL.create                           trytond/trytond/model/modelsql.py:969  [method]
+        CRT.20                ModelSingleton.create                     trytond/trytond/model/modelsingleton.py:39  [method]
+        CRT.22                ModelStorage.create                       trytond/trytond/model/modelstorage.py:280  [method]
+        CRT.23                Notification.create                       trytond/trytond/res/notification.py:83  [method]
+        CRT.19                One2Many.set.create                       trytond/trytond/model/fields/one2many.py:221  [method]
+        CRT.06                PartyTestCase.test_phone_number_format.create  modules/party/tests/test_module.py:559  [method]
+        CRT.09                ProductTestCase.test_uom_check_factor_and_rate.create  modules/product/tests/test_module.py:86  [method]
+        CRT.08                ProductTestCase.test_uom_non_zero_rate_factor.create  modules/product/tests/test_module.py:39  [method]
+        CRT.07                RelationAll.create                        modules/party_relationship/party.py:194  [method]
+        CRT.16                ResourceAccessMixin.create                trytond/trytond/ir/resource.py:129  [method]
+        CRT.17                Sequence.create                           trytond/trytond/ir/sequence.py:189  [method]
+        CRT.04                TaxCodeTemplate.create_tax_code.create    modules/account/tax.py:98  [method]
+
+⏺ Bash(codeir grep "TaxLine\(\|\.create\(" --path modules/account/invoice.py -i 2>/dev/null | head -20)
+  ⎿  No matches found.
+
+⏺ Bash(codeir search "InvoiceLine get_tax" --repo-path . 2>/dev/null | head -15)
+  ⎿    GTTXCNTXT.03          InvoiceLine._get_tax_context              modules/account_invoice/invoice.py:2777  [method]
+        GTTXRLPTTRN.02        InvoiceLine._get_tax_rule_pattern         modules/account_tax_rule_country/account.py:107  [method]
+        GTTXRLPTTRN           InvoiceLine._get_tax_rule_pattern         modules/account_invoice/invoice.py:2801  [method]
+        INVCLN.11             InvoiceLine                               modules/account_stock_shipment_cost/account.py:447  [class]
+        INVCLN.16             InvoiceLine                               modules/commission/invoice.py:128  [class]
+        INVCLN.04             InvoiceLine                               modules/account_invoice_defer/account.py:495  [class]
+        INVCLN.05             InvoiceLine                               modules/account_invoice_line_standalone/invoice.py:26  [class]
+        INVCLN.19             InvoiceLine                               modules/product_cost_warehouse/account.py:7  [class]
+        INVCLN.30             InvoiceLine                               modules/sale_secondary_unit/account.py:7  [class]
+        INVCLN.14             InvoiceLine                               modules/analytic_invoice/invoice.py:9  [class]
+        INVCLN.23             InvoiceLine                               modules/purchase_secondary_unit/account.py:7  [class]
+        INVCLN.10             InvoiceLine                               modules/account_stock_landed_cost/account.py:546  [class]
+        INVCLN.21             InvoiceLine                               modules/project_invoice/invoice.py:17  [class]
+        INVCLN.13             InvoiceLine                               modules/account_tax_rule_country/account.py:103  [class]
+        INVCLN.31             InvoiceLine                               modules/sale_shipment_cost/account.py:7  [class]
+
+⏺ Bash(codeir grep "tax_line\|\.tax\.\|compute.*tax" --path modules/account/invoice.py -C 2 2>/dev/null | head -60)
+  ⎿  No matches found.
+
+⏺ Bash(codeir search "Invoice compute tax move" --repo-path . 2>/dev/null | head -20)
+  ⎿    CMPTTXS               Invoice._compute_taxes                    modules/account_invoice/invoice.py:1186  [method]
+        GTMV.12               Invoice.get_move                          modules/account_tax_cash/account.py:254  [method]
+        CMPTTXS.02            InvoiceLine._compute_taxes                modules/account_invoice/invoice.py:3023  [method]
+        CMPTTXS.03            InvoiceLine._compute_taxes                modules/account_tax_non_deductible/account.py:79  [method]
+        CMPTMNT               InvoiceTax._compute_amount                modules/account_invoice/invoice.py:3277  [method]
+        GTMVLNS.04            InvoiceTax.get_move_lines                 modules/account_invoice/invoice.py:3326  [method]
+        CMPTNTPRC             Move._compute_unit_price                  modules/account_invoice_stock/stock.py:100  [method]
+        INVC.18               Invoice                                   modules/account_tax_cash/account.py:234  [class]
+        CHCKTXS               Invoice._check_taxes                      modules/account_invoice/invoice.py:2076  [method]
+        GTXCHNGMVLN           Invoice._get_exchange_move_line           modules/account_invoice/invoice.py:1275  [method]
+        GTMVLN.04             Invoice._get_move_line                    modules/account_invoice/invoice.py:1234  [method]
+        GTMVLN.03             Invoice._get_move_line                    modules/account_cash_rounding/account.py:159  [method]
+        GTMVLN.05             Invoice._get_move_line                    modules/account_payment/account.py:781  [method]
+        GTTXCNTXT.02          Invoice._get_tax_context                  modules/account_invoice/invoice.py:1178  [method]
+        ONCHNGLNSTXS.02       Invoice._on_change_lines_taxes            modules/account_invoice/invoice.py:742  [method]
+        ONCHNGLNSTXS          Invoice._on_change_lines_taxes            modules/account_cash_rounding/account.py:115  [method]
+        ISZR                  Invoice._on_change_lines_taxes.is_zero    modules/account_invoice/invoice.py:758  [method]
+        PRS2TX                Invoice._parse_2_tax                      modules/edocument_ubl/edocument.py:1124  [method]
+        PRS2TXCTGRY           Invoice._parse_2_tax_category             modules/edocument_ubl/edocument.py:1107  [method]
+        PRS2TXDNTFR           Invoice._parse_2_tax_identifier           modules/edocument_ubl/edocument.py:979  [method]
+
+⏺ Bash(codeir show GTTXCNTXT.03 --repo-path . --level Behavior 2>/dev/null)
+  ⎿  Entity: InvoiceLine._get_tax_context  [method]
+      File:   modules/account_invoice/invoice.py:2777
+      Level:  Behavior
+
+      MT GTTXCNTXT.03 C=_get_tax_context,depends F=IR A=2 #CORE
+
+⏺ Bash(codeir expand CMPTTXS --repo-path . 2>/dev/null)
+  ⎿  Entity: Invoice._compute_taxes  [method]
+      File:   modules/account_invoice/invoice.py:1186-1193
+
+          def _compute_taxes(self):
+              for key, tax_line in self._get_taxes().items():
+                  value = dict(tax_line.values())
+                  value['invoice'] = self.id
+                  value['manual'] = False
+                  value['description'] = tax_line.tax.description
+                  value['legal_notice'] = tax_line.tax.legal_notice
+                  yield key, value
+
+⏺ Bash(codeir expand CMPTTXS.02 --repo-path . 2>/dev/null)
+  ⎿  Entity: InvoiceLine._compute_taxes  [method]
+      File:   modules/account_invoice/invoice.py:3023-3044
+
+          def _compute_taxes(self):
+              pool = Pool()
+              Currency = pool.get('currency.currency')
+              TaxLine = pool.get('account.tax.line')
+
+              tax_lines = []
+              if self.type != 'line':
+                  return tax_lines
+              taxes = self._get_taxes().values()
+              for tax in taxes:
+                  amount = tax.base
+                  with Transaction().set_context(
+                          date=self.invoice.currency_date):
+                      amount = Currency.compute(
+                          self.invoice.currency, amount,
+                          self.invoice.company.currency)
+                  tax_line = TaxLine()
+                  tax_line.amount = amount
+                  tax_line.type = 'base'
+                  tax_line.tax = tax.tax
+                  tax_lines.append(tax_line)
+              return tax_lines
+
+                                                                                                                12:52 PM claude-opus-4-5-20251101
+⏺ Now I have a clear picture of the current architecture. Let me propose a plan.</code></pre>
+              </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ____________________________________Section 3: CodeIR in Practice______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>What CodeIR Looks Like in Practice</h2>
+            <p>
+              CodeIR is a tool that builds an architectural map of a repository.
+</p>
+<p>
+              You index a repo once, and your coding agent can see the structure of the entire 
+              system: entities, relationships, and behavioral signatures before reading a 
+              single source file.
+            </p>
+            <p>
+              Instead of navigating through files, the model navigates through architecture.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Setup & Workflow</div>
+
+            <h4>Setup</h4>
+<pre><code>pip install codeir
+codeir index ./your-repo</code></pre>
+
+            <p>
+                This creates a <code>.codeir/</code> directory containing the index.
+                CodeIR also generates files your agent reads automatically:
+            </p>
+            <ul>
+                <li><code>.claude/rules/codeir.md</code> - tool usage instructions (tells the agent how to use the CodeIR commands)</li>
+                <li><code>.claude/bearings.md</code> - the full architectural map of your codebase</li>
+                <li><code>.claude/bearings/{category}.md</code> - per-category detail for large codebases</li>
+            </ul>
+
+            <p>The workflow changes from "read files and hope" to a structured discovery process:</p>
+
+            <div class="workflow">
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">01</span>
+                        <span class="workflow-label">Orient</span>
+                    </div>
+                    <p>The agent reads bearings.md at session start. In 200–400 tokens, it knows every module in the codebase, what each one does, how they depend on each other. It knows where to look before it looks anywhere. For large codebases, per-category bearings files let the agent drill into only the relevant slice.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">02</span>
+                        <span class="workflow-label">Search</span>
+                    </div>
+                    <p>Instead of grepping through files, the agent searches the semantic index. Multi-term queries with OR logic and ranking: <code>codeir search "auth token validate"</code> returns the specific entities relevant to the task, not files that happen to contain those words. Use <code>--category</code> to filter (e.g., <code>--category core_logic</code> to skip tests).</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">03</span>
+                        <span class="workflow-label">Grep</span>
+                    </div>
+                    <p>When search doesn't find what you need, <code>codeir grep</code> does regex search across source files, grouped by entity. Use <code>--path</code> to scope to a directory and <code>-v</code> for full IR context per match. This bridges the gap between entity-oriented search and line-oriented grep.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">04</span>
+                        <span class="workflow-label">Inspect</span>
+                    </div>
+                    <p>The agent retrieves entity-level IR at the detail level it needs. Index level for quick orientation ("what kind of thing is this?"), Behavior level for understanding ("what does this actually do and what does it call?").</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">05</span>
+                        <span class="workflow-label">Trace</span>
+                    </div>
+                    <p><code>codeir callers</code> finds everything that references a given entity: import-level, local, and fuzzy matching (results marked <code>~</code> are probable but not certain). <code>codeir impact</code> does reverse dependency analysis via BFS — showing affected entities grouped by distance with the full dependency chain.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step workflow-step--last">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">06</span>
+                        <span class="workflow-label">Expand</span>
+                    </div>
+                    <p>Only when the agent needs to verify exact implementation details or make a change does it expand to raw source. This is the last step, not the first.</p>
+                </div>
+            </div>
+
+            <p>
+                <em>The net effect: Claude Code stops reading files it doesn't need. It spends
+                its context window on understanding the system instead of re-reading syntax.</em>
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: CLI Reference & IR Format</div>
+
+            <h4>Available CLI Commands</h4>
+<pre><code>codeir index &lt;path&gt;                              # Index or re-index a repository
+codeir search &lt;query&gt; [--category &lt;cat&gt;]         # Multi-term OR search with ranking
+codeir grep &lt;pattern&gt; [--path &lt;dir&gt;] [-i] [-C N] [-v]  # Regex search, grouped by entity
+codeir show &lt;entity_id&gt; [--level Index|Behavior] # Show entity IR at specified level
+codeir expand &lt;entity_id&gt;                        # Expand to full source
+codeir callers &lt;entity_id&gt;                       # Three-tier caller resolution
+codeir impact &lt;entity_id&gt; [--depth N]            # Reverse dependency analysis (BFS)
+codeir bearings                                  # Regenerate bearings.md
+codeir stats                                     # Compression statistics
+codeir module-map                                # Show classified module map</code></pre>
+
+            <p>
+                CodeIR is globally installed via symlink at <code>/usr/local/bin/codeir</code>.
+                The <code>.claude/rules/</code> directory is read automatically by Claude Code,
+                so the integration requires zero manual configuration after indexing.
+            </p>
+
+            <hr>
+
+            <h4>What bearings.md Looks Like</h4>
+            <p>
+                Each line describes one module: its ID, filename, category, entity count,
+                dependencies, and churn. Grouped by category, ordered by entity count.
+            </p>
+<pre><code>MD INVC invoice.py | cat:core_logic | entities:221 | deps:- | churn:-
+MD SESS sessions.py | cat:core_logic | entities:18  | deps:auth,hooks,utils | churn:-
+MD AUTH auth.py     | cat:core_logic | entities:12  | deps:sessions,models | churn:-
+MD HOOK hooks.py    | cat:extension  | entities:7   | deps:sessions | churn:-
+...</code></pre>
+
+            <p>
+                The entire architectural map of a codebase like Flask (83 files, 1,629 entities)
+                fits in a few hundred tokens. Django (2,894 files, 41,819 entities) fits in a
+                few thousand. This is the orientation layer - the agent reads it once and
+                immediately knows the shape of the system.
+            </p>
+            <p>
+                For large codebases like Tryton, per-category bearings files break the map
+                into manageable pieces. The agent loads <code>.claude/bearings/core_logic.md</code>
+                when working on business logic, <code>.claude/bearings/tests.md</code> when
+                writing tests - never the whole thing at once if it doesn't need to.
+            </p>
+
+            <hr>
+
+            <h4>Entity IR at Each Level</h4>
+
+            <h5>Index - orientation (selection-level)</h5>
+<pre><code>FN RDTKN #HTTP #CORE</code></pre>
+
+            <h5>Behavior - what it does and calls (reasoning-level)</h5>
+<pre><code>MT WBHK.02 C=webhook_charge_captured,webhook_charge_dispute_closed,webhook_charge_dispute_created,webhook_charge_expired,webhook_charge_failed,webhook_charge_pending F=IR A=2 #CORE</code></pre>
+
+            <p>
+                Behavior fields: <code>C=</code> calls made, <code>F=</code> flags
+                (R=returns, E=raises, I=conditionals, L=loops, T=try/except, W=with),
+                <code>A=</code> assignment count, <code>B=</code> base class.
+            </p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Flag/Field</th>
+                        <th>Meaning</th>
+                        <th>Why the LLM cares</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>C=</code> (Calls)</td>
+                        <td>Outgoing dependencies</td>
+                        <td>Traces the "blast radius." If MT.A calls MT.B, the model knows a change in B might require an update in A.</td>
+                    </tr>
+                    <tr>
+                        <td><code>F=IR</code> (Flags)</td>
+                        <td>Internal Logic (e.g., If, Return)</td>
+                        <td>Indicates complexity. F=R is a simple pipe; F=ITLW (If, Try, Loop, With) is a high-logic function that needs careful handling.</td>
+                    </tr>
+                    <tr>
+                        <td><code>A=2</code> (Assignments)</td>
+                        <td>State changes</td>
+                        <td>Tells the model if the function is "pure" or if it's juggling internal state. High assignment counts signal a "heavy lifter" function.</td>
+                    </tr>
+                    <tr>
+                        <td><code>B=</code> (Bases)</td>
+                        <td>Class inheritance</td>
+                        <td>Immediately establishes the "Rules of the Road" (e.g., knowing a class inherits from Model or Singleton without reading the imports).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5>Source expansion (verification-level)</h5>
+<pre><code>[FN RDTKN @auth/tokens.py:47]
+async def read_token(token: str, session: Session) -> TokenData:
+    response = session.get(f"/tokens/{token}")
+    ...</code></pre>
+
+            <p>
+                The agent navigates this hierarchy the same way a developer navigates a system:
+                broad orientation first, then targeted deep dives only where needed.
+            </p>
+
+            <hr>
+
+            <h4>Example Workflow (Tryton codebase)</h4>
+<pre><code>1. codeir search "flush"              → no relevant results
+2. codeir grep "def flush" --path orm/ → finds entity FLSH.04 in orm/session.py
+3. codeir show FLSH.04                → see Behavior IR: what it calls, flags, assignments
+4. codeir callers FLSH.04             → see what depends on it
+5. codeir impact FLSH.04 --depth 2    → understand blast radius before changing
+6. codeir expand FLSH.04              → read source only for the entity you need to modify</code></pre>
+
+            <p>
+                <em>Stay at the highest abstraction level that lets you make your current decision.
+                Use expand only on entities you need to modify.</em>
+            </p>
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 4: How It Works______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>How It Works Under the Hood</h2>
+            <p>
+              Instead of reading files and hoping to find the right ones, 
+              CodeIR gives the agent the whole system in view, with the 
+              ability to drill into any detail on demand.
+            </p>
+            <p>
+              CodeIR compiles a codebase into a hierarchical
+              representation with three levels: Index, Behavior and Source.
+            </p>
+            <p>
+This allows models to orient themselves across thousands of entities before expanding only the specific code they need.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: The Three Layers</div>
+
+            <div class="ir-cards">
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 1</span>
+                        <span class="ir-card-name">Index</span>
+                        <span class="ir-card-tag">Architectural Map</span>
+                    </div>
+                    <p>Every entity in the codebase gets a one-line representation: entity type, stable ID, domain tag, category tag. An agent can scan thousands of entities in a few hundred tokens and identify which ones are relevant to a task.</p>
+                    <p class="ir-card-question">Answers: <em>what is this codebase made of?</em></p>
+                </div>
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 2</span>
+                        <span class="ir-card-name">Behavior</span>
+                        <span class="ir-card-tag">Reasoning Layer</span>
+                    </div>
+                    <p>Selected entities get expanded to Behavior: type, ID, calls made, flags (returns, raises, conditionals, loops, try/except, with-blocks), assignment count, and base class. The agent can understand what an entity does and what it depends on — without reading source.</p>
+                    <p class="ir-card-question">Answers: <em>what does this entity actually do?</em></p>
+                </div>
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 3</span>
+                        <span class="ir-card-name">Source</span>
+                        <span class="ir-card-tag">Verification Layer</span>
+                    </div>
+                    <p>When the agent needs to verify exact implementation or make a modification, it expands to full source with entity boundary markers.</p>
+                    <p class="ir-card-question">Answers: <em>exactly how is this implemented?</em></p>
+                </div>
+            </div>
+
+            <p>
+                The compilation process is one-time per repository: AST parsing extracts every
+                entity (functions, classes, methods, constants), a classifier assigns each module
+                to a category, and a multi-pass indexer generates all IR levels with stable,
+                deterministic entity IDs. Re-indexing is incremental — only changed files get
+                reprocessed.
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Compilation Pipeline</div>
+
+            <h4>The Compilation Pipeline in Detail</h4>
+
+            <h5>Step 1: AST Extraction</h5>
+            <p>
+                CodeIR walks every Python file with an AST visitor, extracting functions,
+                async functions, classes, methods, and module-level constants. Each entity
+                gets boundary markers (start line, end line) and import analysis (what this
+                entity imports and from where).
+            </p>
+
+            <h5>Step 2: Module Classification</h5>
+            <p>
+                Each file is classified into categories: <code>core_logic</code>, <code>data_model</code>,
+                <code>api_endpoint</code>, <code>auth</code>, <code>config</code>, <code>utility</code>,
+                <code>extension</code>, <code>test</code>, <code>migration</code>, <code>cli</code>,
+                <code>docs</code>, <code>constants</code>, <code>exceptions</code>, <code>init</code>,
+                <code>router</code>. Classification uses structural signals — import patterns,
+                decorator presence, naming conventions — not LLM inference.
+            </p>
+
+            <h5>Step 3: Stable ID Generation</h5>
+            <p>
+                Every entity gets a deterministic ID that remains stable across re-indexing
+                as long as the entity's name and location don't change. Format:
+                <code>TYPE STEM.SUFFIX</code> (e.g., <code>FN RDTKN.03</code>, <code>MT WBHK.02</code>).
+                The ID scheme uses vowel-stripped abbreviations with numeric suffixes for
+                disambiguation.
+            </p>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Type</th><th>Meaning</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>FN</code></td><td>Function</td></tr>
+                    <tr><td><code>CLS</code></td><td>Class</td></tr>
+                    <tr><td><code>MT</code></td><td>Method</td></tr>
+                    <tr><td><code>AMT</code></td><td>Async method</td></tr>
+                </tbody>
+            </table>
+            <p>
+                Stable IDs act as pointers for the LLM's memory, allowing it to maintain
+                a constant "mental map" even as the underlying code changes.
+            </p>
+
+            <h5>Step 4: Multi-level IR Generation</h5>
+            <p>Each entity is compressed at all levels simultaneously:</p>
+            <ul>
+                <li><strong>Index</strong> strips everything except type, ID, and domain/category tags</li>
+                <li><strong>Behavior</strong> adds: calls made (<code>C=</code>), flags (<code>F=</code> with single-letter codes: R returns, E raises, I conditionals, L loops, T try/except, W with-blocks), assignment count (<code>A=</code>), base class (<code>B=</code>)</li>
+                <li><strong>Source</strong> wraps the original code with entity metadata headers (<code>[TYPE ID @filepath:line]</code>)</li>
+            </ul>
+            <p>
+                Empty fields are omitted at Behavior level (no <code>C=-</code>, <code>F=-</code>,
+                <code>A=0</code>). Trivial entities below a token threshold skip compression
+                and store as source at all levels.
+            </p>
+
+            <h5>Step 5: Bearings Generation</h5>
+            <p>
+                Once classification and entity counting are complete, the index generates the
+                module-level map. This contains no entity-level IR — it's a directory of modules
+                grouped by category with dependency and churn information. For large codebases,
+                per-category bearings files are generated in
+                <code>.claude/bearings/{category}.md</code>.
+            </p>
+
+            <h5>Storage</h5>
+            <p>
+                SQLite with WAL mode, two-database design (entities + mappings). Created
+                automatically in <code>.codeir/</code> on first indexing. Incremental
+                re-indexing uses change detection — only modified files trigger reprocessing.
+            </p>
+
+            <hr>
+
+            <h4>A Note on What Was Evaluated and Removed</h4>
+            <p>
+                An intermediate level between Index and Behavior (type signatures only) was
+                tested and cut. It was too compressed to be safe — agents would confidently
+                reason from type information without seeing behavioral flags like exception
+                handling, leading to plans that missed critical error conditions. The
+                three-level stack is cleaner and each level has a clear, non-overlapping purpose.
+            </p>
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 5: Benchmarks______________________________
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>Benchmark: Navigation Accuracy</h2>
+            <p>
+                CodeIR's oriented retrieval consistently outperforms embedding-based retrieval
+                across models.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Results</div>
+
+            <p>
+                Tested on fastapi-users (88 files, 24 benchmark tasks covering structural
+                reasoning, entity identification, and cross-module tracing):
+            </p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Haiku Top-3</th>
+                        <th>Sonnet Top-3</th>
+                        <th>Opus Top-3</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MPNet embedding retrieval</td>
+                        <td>70.8%</td>
+                        <td>58.3%</td>
+                        <td>33.3%</td>
+                    </tr>
+                    <tr>
+                        <td>BM25 lexical retrieval</td>
+                        <td>50.0%</td>
+                        <td>45.8%</td>
+                        <td>16.7%</td>
+                    </tr>
+                    <tr>
+                        <td>Raw source baseline</td>
+                        <td>50.0%</td>
+                        <td>45.8%</td>
+                        <td>25.0%</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR (flow v2)</td>
+                        <td>79.2%</td>
+                        <td>83.3%</td>
+                        <td>83.3%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                The striking pattern: baselines degrade as models get stronger. CodeIR holds
+                steady or improves. The delta grows from +8 points on Haiku to +50 points on Opus.
+            </p>
+            <p>
+                This isn't a paradox. Stronger models are better at recognizing when context
+                is insufficient — Opus sees five code fragments from embedding retrieval and
+                correctly identifies that it can't reason about the full picture. It hedges
+                instead of guessing. Give it the architectural map, and it goes from 33% to 83%.
+            </p>
+
+            <blockquote>
+                The implication: as models improve at knowing what they don't know,
+                fragment-based retrieval becomes less effective, not more. Structured context
+                becomes a requirement, not an optimization.
+            </blockquote>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Token Economics & Comparisons</div>
+
+            <h4>Token Economics</h4>
+            <p>Token costs tell the same story:</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Haiku Warm</th>
+                        <th>Sonnet Warm</th>
+                        <th>Opus Warm</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Raw source baseline</td>
+                        <td>6,727</td>
+                        <td>7,339</td>
+                        <td>16,846</td>
+                    </tr>
+                    <tr>
+                        <td>BM25 lexical</td>
+                        <td>6,973</td>
+                        <td>7,650</td>
+                        <td>26,220</td>
+                    </tr>
+                    <tr>
+                        <td>MPNet embedding</td>
+                        <td>2,296</td>
+                        <td>3,114</td>
+                        <td>6,575</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR (flow v2)</td>
+                        <td>817</td>
+                        <td>669</td>
+                        <td>798</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                CodeIR's per-task token cost is stable across models (~670–820 tokens) while
+                baseline costs scale with model capability. Opus baselines are especially
+                expensive because the model generates more reasoning tokens when uncertain.
+            </p>
+
+            <h4>Important Caveat</h4>
+            <p>
+                The "warm" token count assumes orientation cost (reading bearings.md + Index)
+                is amortized across a session. In practice, prompt caching makes this nearly
+                free after the first task — the bearings prefix is static between tasks on a
+                stable codebase. Cold tokens (including orientation) run higher, but only the
+                first task in a session pays the full cost.
+            </p>
+
+            <h4>Caching Economics</h4>
+            <p>
+                With prompt caching, warm-mode CodeIR is cheaper per task than the MPNet
+                embedding baseline. The Index/bearings prefix currently falls below the minimum
+                caching threshold for some models — padding it with richer context (more detailed
+                module descriptions, common task patterns) would simultaneously unlock caching
+                and potentially improve accuracy.
+            </p>
+
+            <h4>Multi-Model Comparison: CodeIR vs Aider Repo Map</h4>
+            <p>
+                On the same 24-task benchmark, CodeIR's filtered Index scored 91.7% top-3
+                accuracy vs Aider's repo map at ~50%. A structural note: CodeIR's entity IDs
+                are the same vocabulary as the ground truth (the model returns IDs it was
+                given), while Aider requires a mapping layer from natural-language entity
+                references to ground truth IDs. This is a genuine design advantage, not an
+                unfair comparison — but it's worth noting that some of Aider's misses come
+                from mapping failures rather than retrieval failures.
+            </p>
+            <p class="todo-note">[TODO: Per-task breakdown showing which task types each approach wins/loses on — structural tasks vs. keyword-matchable tasks]</p>
+        </div>
+    </section> -->
+
+    <!-- ____________________________________Section 6: Case Study 2______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>Case Study 2: Finding a Bug Across Module Boundaries</h2>
+            <!-- <p>
+                I planted a single-line bug in SQLAlchemy's unit of work system (689 files,
+                38,672 entities) and gave Claude only the symptoms. Both runs found it.
+                CodeIR did it in 39% fewer input tokens — reading 133 lines instead of 1,100.
+                The bug wasn't visible in any single file. It existed in the relationship
+                between two modules: a set filter in one method silently let bad state flow
+                into a session call in another.
+</p> -->
+<p>
+                I planted a single-line bug in SQLAlchemy’s unit-of-work system (689 files, 38,672 entities) and gave Claude only the symptoms.
+              </p>
+              <p>
+Both runs eventually found it.
+</p>
+<p>
+The difference was how they got there. The baseline run read over 1,100 lines of source across multiple files before forming a hypothesis.
+</p>
+<p>
+The CodeIR run followed the architectural trail: one search, one behavior inspection, and a targeted expansion of about 20 lines.
+</p>
+<p>
+Same diagnosis, 39% fewer input tokens.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Baseline vs. CodeIR</div>
+
+            <p>
+                The bug was a subtle filter addition in <code>finalize_flush_changes</code> —
+                the method that marks objects clean after a flush. Adding
+                <code>and not listonly</code> to a set comprehension looks defensively correct:
+                skip list-only states when computing deletes. But the leftover set
+                (<code>other = states.difference(isdel)</code>) still includes those list-only
+                states, and they flow into <code>_register_persistent()</code>, silently
+                polluting the identity map. Each file reads fine on its own. The problem only
+                appears when you trace the data flow across the set arithmetic and the
+                downstream call.
+            </p>
+            <p>
+                Without CodeIR, Claude read the full files — 799 lines of
+                <code>unitofwork.py</code>, then <code>session.py</code>, then
+                <code>identity.py</code> — over 1,100 lines before forming a hypothesis.
+            </p>
+            <p>
+                With CodeIR, the path was progressive: search found the method in one call,
+                Behavior IR revealed its callees without reading source, expand retrieved
+                only the 20 lines that mattered, and grep confirmed the <code>listonly</code>
+                pattern across the codebase. Total source read: 133 lines.
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Case Study: SQLAlchemy Bug Diagnosis</div>
+
+            <p>
+                I introduced a single-line bug into SQLAlchemy's unit of work system and asked
+                Claude Opus to find it twice: without CodeIR and with it.
+            </p>
+            <p>
+                SQLAlchemy is 689 files and 38,672 entities. The bug was in
+                <code>finalize_flush_changes</code>, the method that marks objects as clean or
+                deleted after a flush. I added <code>and not listonly</code> to a set
+                comprehension filter. It looks defensively correct. It's not. List-only states
+                fall through to <code>_register_persistent()</code> and silently pollute the
+                identity map. Each file looks fine on its own. The bug only exists in the
+                relationship between the set arithmetic and the downstream session call.
+            </p>
+            <p>The prompt described symptoms, not locations:</p>
+            <blockquote>
+                "After a flush that involves relationship cascades, objects that were only pulled
+                in as part of the cascade end up polluting the identity map as if they'd been
+                persisted. Downstream queries return stale data. It only breaks with a mix of
+                dirty objects and their unmodified related objects."
+            </blockquote>
+
+            <h4>Results</h4>
+            <p>Both runs found and correctly diagnosed the bug.</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Run</th>
+                        <th>Input tokens</th>
+                        <th>Output tokens</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Baseline (no CodeIR)</td>
+                        <td>945,107</td>
+                        <td>5,281</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR</td>
+                        <td>578,703</td>
+                        <td>2,887</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>39% fewer input tokens, 45% fewer output tokens.</strong> Same diagnosis.</p>
+
+            <h4>What Happened</h4>
+            <p>
+                Without CodeIR, Claude read entire files. All 799 lines of
+                <code>unitofwork.py</code>, the full <code>session.py</code>,
+                <code>identity.py</code>. Over 1,100 lines of source before forming a hypothesis.
+            </p>
+            <p>
+                With CodeIR, the path was progressive. Search found the method in one call.
+                Behavior-level IR showed what it calls without reading source. Expand retrieved
+                only the 20 lines that mattered. Grep with path scoping confirmed the
+                <code>listonly</code> pattern across the codebase. Total source read: about 133 lines.
+            </p>
+
+            <h4>Takeaway</h4>
+            <p>
+                In other case studies, CodeIR has found bugs that raw tools missed entirely.
+                Here, both approaches succeeded, but CodeIR got there faster and with fewer
+                tokens. 39% fewer input tokens, 45% fewer output tokens, and a targeted
+                133-line read instead of a 1,100-line brute force. That gap compounds over
+                longer tasks with multiple navigation cycles.
+            </p>
+
+            <div class="terminal-comparison">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">Without CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>This sounds like a tricky bug in the unit of work / cascade / identity map interaction. Let me get oriented in this SQLAlchemy codebase and trace through the relevant areas.
+
+⏺ Search(pattern: "**/*.md")
+  ⎿  Found 4 files (ctrl+o to expand)
+
+⏺ Search(pattern: "lib/sqlalchemy/orm/**/*.py")
+  ⎿  Found 38 files (ctrl+o to expand)
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ Let me explore the key files for session flush, identity map, and cascade handling.
+
+⏺ Read(lib/sqlalchemy/orm/session.py)
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 799 lines
+
+⏺ Read(lib/sqlalchemy/orm/identity.py)
+  ⎿  Read 303 lines
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I found something interesting. Let me look at the finalize_flush_changes method more closely and the session's _register_persistent method.
+
+⏺ Search(pattern: "def _register_persistent", path: "lib/sqlalchemy/orm")
+  ⎿  Found 1 line (ctrl+o to expand)
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm")
+  ⎿  Found 13 lines (ctrl+o to expand)
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I see a potential issue in the finalize_flush_changes logic. Let me read the session's _register_persistent method and the surrounding context.
+
+⏺ Read(lib/sqlalchemy/orm/session.py)
+  ⎿  Read 100 lines
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I found the bug. Let me look at the finalize_flush_changes method more carefully and then confirm how listonly states get registered.
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 30 lines
+
+⏺ Search(pattern: "register_object.*listonly.*True", path: "lib/sqlalchemy/orm")
+  ⎿  Found 0 lines
+
+⏺ Search(pattern: "listonly=True", path: "lib/sqlalchemy/orm")
+  ⎿  Found 0 lines
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/dependency.py")
+  ⎿  Found 23 lines (ctrl+o to expand)
+
+⏺ Search(pattern: ", True\)", path: "lib/sqlalchemy/orm/unitofwork.py")
+  ⎿  Found 23 lines (ctrl+o to expand)
+
+∴ Thinking…
+  Interesting! Line 243-245 shows remove_state_actions which sets listonly=True:
+  def remove_state_actions(self, state):
+      """Remove pending actions for a state from the uowtransaction."""
+      isdelete = self.states[state][0]
+      self.states[state] = (isdelete, True)
+  So states can have their actions removed during flush processing but still remain in
+  the states dict with listonly=True. These are objects initially considered for flush
+  but then determined to not need any actual database operations.
+
+  Now I understand the bug clearly:
+  1. Objects are registered via register_object() during cascade processing
+  2. Some have actions removed via remove_state_actions() → listonly=True
+  3. In finalize_flush_changes():
+     - isdel correctly filters for isdelete=True AND listonly=False
+     - But other = states.difference(isdel) includes ALL remaining states,
+       including those with listonly=True
+  4. These listonly=True states are passed to _register_persistent() which:
+     - Replaces them in the identity map
+     - Commits their state (marks them clean)
+     - Registers them as altered
+
+                                                                                   10:43 AM claude-opus-4-5-20251101
+⏺ I've found the bug. Here's what's happening:
+
+  Root Cause Analysis
+  In finalize_flush_changes() (unitofwork.py lines 470-489):
+
+  states = set(self.states)
+  isdel = {
+      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+  }
+  other = states.difference(isdel)  # &lt;-- BUG IS HERE
+
+  The listonly flag marks states pulled in during cascade processing that don't need
+  actual database operations. When computing other, it correctly filters listonly from
+  deleted states, but states.difference(isdel) includes ALL non-deleted states —
+  including those with listonly=True.
+
+  These listonly=True states then get passed to _register_persistent() which adds them
+  to the identity map and marks them as clean — even though they were never written.
+
+  The Fix:
+  other = {
+      s for (s, (isdelete, listonly)) in self.states.items()
+      if not isdelete and not listonly
+  }
+
+⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
+                    </div>
+                </div>
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">With CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>This sounds like a bug in the unit of work or identity map handling during cascade flushes. Let me orient in the SQLAlchemy codebase and trace the relevant code paths.
+
+⏺ I'll investigate this flush finalization bug. Let me start by understanding the codebase structure and then locate the flush-related logic.
+
+⏺ Read(.claude/bearings-summary.md)
+  ⎿  Read 19 lines
+
+⏺ Bash(codeirsearch "flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -40)
+
+⏺ Bash(codeirsearch "finalize flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
+  ⎿    FNLZFLSHCHNGS         UOWTransaction.finalize_flush_changes     lib/sqlalchemy/orm/unitofwork.py:470  [method]
+       ATFLSH.03             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1545  [method]
+       ATFLSH.04             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1554  [method]
+       FLSH.02               AsyncSession.flush                        lib/sqlalchemy/ext/asyncio/session.py:826  [async_method]
+       NTFLSH.02             AsyncSession.no_autoflush                 lib/sqlalchemy/ext/asyncio/session.py:1558  [method]
+       TSTFLSH               AsyncSessionTransactionTest.test_flush    test/ext/asyncio/test_session.py:613  [async_method]
+       ATFLSHTST             AutoFlushTest                             test/ext/test_associationproxy.py:94  [class]
+       FXTR.16               AutoFlushTest._fixture                    test/ext/test_associationproxy.py:120  [method]
+       ASSCTN                AutoFlushTest._fixture.Association        test/ext/test_associationproxy.py:128  [class]
+       INIT.685              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:131  [method]
+       INIT.686              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:136  [method]
+       CHLD.11               AutoFlushTest._fixture.Child              test/ext/test_associationproxy.py:124  [class]
+       INIT.684              AutoFlushTest._fixture.Child.__init__     test/ext/test_associationproxy.py:125  [method]
+       PRNT.16               AutoFlushTest._fixture.Parent             test/ext/test_associationproxy.py:121  [class]
+       TSTPRMTRFLSH          AutoFlushTest._test_premature_flush       test/ext/test_associationproxy.py:159  [method]
+       DFNTBLS.123           AutoFlushTest.define_tables               test/ext/test_associationproxy.py:96  [method]
+       TSTDCTST              AutoFlushTest.test_dict_set               test/ext/test_associationproxy.py:206  [method]
+       SET.44                AutoFlushTest.test_dict_set.set_          test/ext/test_associationproxy.py:207  [method]
+       TSTLSTPPND            AutoFlushTest.test_list_append            test/ext/test_associationproxy.py:186  [method]
+       TSTLSTXTND            AutoFlushTest.test_list_extend            test/ext/test_associationproxy.py:191  [method]
+       TSTSTDD               AutoFlushTest.test_set_add                test/ext/test_associationproxy.py:196  [method]
+       TSTSTXTND             AutoFlushTest.test_set_extend             test/ext/test_associationproxy.py:201  [method]
+       ATFLSHTST.02          AutoflushTest                             test/orm/test_deferred.py:2780  [class]
+       STPCLSSS.193          AutoflushTest.setup_classes               test/orm/test_deferred.py:2782  [method]
+       A.355                 AutoflushTest.setup_classes.A             test/orm/test_deferred.py:2785  [class]
+       B.196                 AutoflushTest.setup_classes.B             test/orm/test_deferred.py:2791  [class]
+       TSTDFRRDTFLSHS        AutoflushTest.test_deferred_autoflushes   test/orm/test_deferred.py:2800  [method]
+       TSTRFLSH              BiDirectionalManyToOneTest.test_reflush   test/orm/test_cycles.py:509  [method]
+       TSTRFLSH2             BiDirectionalManyToOneTest.test_reflush_2  test/orm/test_cycles.py:529  [method]
+       TSTTFLSH              BulkDMLReturningInhTest.test_autoflush    test/orm/dml/test_bulk_statements.py:1267  [method]
+
+
+⏺ Bash(codeirsearch "list_only" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -20)
+  ⎿  No entities found.
+
+
+⏺ Bash(codeirsearch "identity persistent" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
+  ⎿    TSTDNTTYFLG           SessionLifecycleEventsTest.test_loaded_as_persistent.test_identity_flag  test/orm/test_events.py:3432  [method]
+       IDNTTY                InstanceState.identity                    lib/sqlalchemy/orm/state.py:409  [method]
+       IDNTTY.02             Identity                                  lib/sqlalchemy/sql/schema.py:6381  [class]
+       INIT.529              Identity.__init__                         lib/sqlalchemy/sql/schema.py:6423  [method]
+       ASDCT.03              Identity._as_dict                         lib/sqlalchemy/sql/schema.py:6555  [method]
+       ASFRPDT.03            Identity._as_for_update                   lib/sqlalchemy/sql/schema.py:6539  [method]
+       COPY.33               Identity._copy                            lib/sqlalchemy/sql/schema.py:6550  [method]
+       STPRNT.19             Identity._set_parent                      lib/sqlalchemy/sql/schema.py:6517  [method]
+       COPY.32               Identity.copy                             lib/sqlalchemy/sql/schema.py:6547  [method]
+       ONNLL                 Identity.on_null                          lib/sqlalchemy/sql/schema.py:6509  [method]
+       IDNTTYTNCRMNTTST      IdentityAutoincrementTest                 lib/sqlalchemy/testing/suite/test_select.py:1771  [class]
+       DFNTBLS.32            IdentityAutoincrementTest.define_tables   lib/sqlalchemy/testing/suite/test_select.py:1776  [method]
+       TSTTNCRMNTWTHDNTTY    IdentityAutoincrementTest.test_autoincrement_with_identity  lib/sqlalchemy/testing/suite/test_select.py:1790  [method]
+       IDNTTYCHSR.05         IdentityChooser                           lib/sqlalchemy/ext/horizontal_shard.py:92  [class]
+       CALL.29               IdentityChooser.__call__                  lib/sqlalchemy/ext/horizontal_shard.py:93  [method]
+       IDNTTYCLMNTST.02      IdentityColumnTest                        test/engine/test_reflection.py:2343  [class]
+       IDNTTYCLMNTST         IdentityColumnTest                        lib/sqlalchemy/testing/suite/test_select.py:1691  [class]
+       DFNTBLS.115           IdentityColumnTest.define_tables          test/engine/test_reflection.py:2350  [method]
+       DFNTBLS.31            IdentityColumnTest.define_tables          lib/sqlalchemy/testing/suite/test_select.py:1698  [method]
+       INSRTDT.16            IdentityColumnTest.insert_data            lib/sqlalchemy/testing/suite/test_select.py:1725  [method]
+       TSTNSRTLWYSRRR        IdentityColumnTest.test_insert_always_error  lib/sqlalchemy/testing/suite/test_select.py:1761  [method]
+       FN                    IdentityColumnTest.test_insert_always_error.fn  lib/sqlalchemy/testing/suite/test_select.py:1762  [method]
+       TSTSLCTLL.02          IdentityColumnTest.test_select_all        lib/sqlalchemy/testing/suite/test_select.py:1739  [method]
+       TSTSLCTCLMNS.02       IdentityColumnTest.test_select_columns    lib/sqlalchemy/testing/suite/test_select.py:1754  [method]
+       TSTTBLRFLCTN.02       IdentityColumnTest.test_table_reflection  test/engine/test_reflection.py:2358  [method]
+       IDNTTYDDL             IdentityDDL                               test/sql/test_identity_column.py:156  [class]
+       IDNTTYDFLTSNPDTTST    IdentityDefaultsOnUpdateTest              test/orm/test_defaults.py:418  [class]
+       DFNTBLS.301           IdentityDefaultsOnUpdateTest.define_tables  test/orm/test_defaults.py:427  [method]
+       STPCLSSS.188          IdentityDefaultsOnUpdateTest.setup_classes  test/orm/test_defaults.py:436  [method]
+       THNG.20               IdentityDefaultsOnUpdateTest.setup_classes.Thing  test/orm/test_defaults.py:437  [class]
+
+
+                                                                                                                                    10:33 AM claude-opus-4-5-20251101
+⏺ Found finalize_flush_changes at unitofwork.py:470. Let me examine this method and search for state transition logic.
+
+⏺ Bash(codeirshow FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main --level Behavior 2>/dev/null)
+  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
+     File:   lib/sqlalchemy/orm/unitofwork.py:470
+     Level:  Behavior
+
+     MT FNLZFLSHCHNGS C=_register_persistent,_remove_newly_deleted,difference,items,set F=IR A=3 #DB #CORE
+
+
+⏺ Bash(codeirexpand FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null)
+  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
+     File:   lib/sqlalchemy/orm/unitofwork.py:470-489
+
+         def finalize_flush_changes(self) -> None:
+             """Mark processed objects as clean / deleted after a successful
+             flush().
+             This method is called within the flush() method after the
+             execute() method has succeeded and the transaction has been committed.
+             """
+             if not self.states:
+                 return
+             states = set(self.states)
+             isdel = {
+                 s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+             }
+             other = states.difference(isdel)
+             if isdel:
+                 self.session._remove_newly_deleted(isdel)
+             if other:
+                 self.session._register_persistent(other)
+
+
+                                                                                                                                    10:33 AM claude-opus-4-5-20251101
+⏺ Found the bug. Look at lines 481-488:
+
+  isdel = {
+      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+  }
+  other = states.difference(isdel)
+
+  The issue: other is calculated as "everything NOT in isdel", but isdel only contains delete operations. List-only states where listonly=True but isdelete=False still end
+  up in other and incorrectly get passed to _register_persistent().
+
+  Let me verify by checking how states are registered and confirm the fix:
+
+⏺ Bash(codeirsearch "register_object" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -15)
+  ⎿    RGSTRBJCT             UOWTransaction.register_object            lib/sqlalchemy/orm/unitofwork.py:308  [method]
+       RGSTRBJCT.02          MetaData._register_object                 lib/sqlalchemy/sql/schema.py:6271  [method]
+
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/unitofwork.py")
+  ⎿  Found 11 lines (ctrl+o to expand)
+
+                                                                                                                                    10:34 AM claude-opus-4-5-20251101
+⏺ Confirmed. The pattern is used correctly elsewhere (lines 526-527, 612-613):
+
+  if not listonly:
+
+  But finalize_flush_changes misses this check. Let me show you the exact bug and fix:
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 30 lines
+
+                                                                                                                                    10:34 AM claude-opus-4-5-20251101
+⏺ The Bug (line 485):
+
+  other = states.difference(isdel)
+
+  This calculates other as "all states except deletes", but list-only states where isdelete=False are NOT excluded. They end up in other and get passed to
+  _register_persistent(), incorrectly moving them to persistent state.
+
+  The Fix:
+
+  other = {
+      s for (s, (isdelete, listonly)) in self.states.items()
+      if not isdelete and not listonly
+  }
+
+  Here's the corrected method:
+
+⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 7: Case Study 3______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>Case Study 3: Same Answer, Fewer Tokens</h2>
+            <!-- <p>
+                I asked both to plan per-blueprint session handling in Flask (83 files,
+                1,629 entities). Both found the same timing challenge — sessions open before
+                routing determines the blueprint — and proposed the same five entities to
+                change. The baseline read 1,620 lines across three full files. CodeIR
+                navigated to the same answer through entity-level inspection, never reading
+                a full file.
+            </p> -->
+            <p>I asked Claude to design per-blueprint session overrides in Flask (83 files, 1,629 entities).
+            </p>
+            <p>
+              Both runs reached the same conclusion: sessions open before routing determines the blueprint, which creates a timing constraint for the design.
+            </p>
+            <p>
+              The baseline reached that insight by brute force reading files.
+            </p>
+            <p>
+              The CodeIR run navigated to the same entities through architectural inspection and expanded only the methods it needed.
+            </p>
+            <p>
+              Same answer, far less source code.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Better Navigation, Not Smaller Files</div>
+
+            <p>
+                The task: add per-blueprint session interfaces to Flask. The core challenge
+                is timing — <code>AppContext._get_session()</code> runs before
+                <code>match_request()</code>, so we don't know which blueprint will handle the
+                request when the session opens. Both runs identified this, proposed the same
+                five entities that need changes, and surfaced the same design tradeoff:
+                deferred session loading vs. per-blueprint save only.
+            </p>
+            <p>
+                The baseline got there by reading <code>sessions.py</code> (386 lines),
+                <code>ctx.py</code> (541 lines), and <code>blueprints.py</code> (693 lines)
+                in full — 1,620 lines of source to build the picture.
+            </p>
+            <p>
+                CodeIR got there by searching for session and blueprint entities, inspecting
+                Behavior IR to understand call relationships, using <code>callers</code> to
+                trace who calls <code>open_session</code> and <code>save_session</code>, and
+                expanding only the specific methods that mattered. It never read a full file.
+            </p>
+            <p>
+                The token savings aren't a compression trick — both approaches read the same
+                codebase. The difference is navigation. CodeIR knew where to look, so it
+                didn't have to read everything.
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Full Token Accounting & Reasoning Traces</div>
+            <p class="todo-note">[TODO: Full token accounting, reasoning trace comparison]</p>
+
+            <div class="terminal-comparison">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">Without CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>I'll explore the Flask codebase to understand the Blueprint and session systems.
+
+⏺ Search(pattern: "**/*.py")
+  ⎿  Found 83 files (ctrl+o to expand)
+
+⏺ Search(pattern: "class Blueprint")
+  ⎿  Found 3 files (ctrl+o to expand)
+
+⏺ Search(pattern: "session_interface")
+  ⎿  Found 8 files (ctrl+o to expand)
+
+⏺ Read(src/flask/sessions.py)
+  ⎿  Read 386 lines
+
+⏺ Read(src/flask/ctx.py)
+  ⎿  Read 541 lines
+
+⏺ Read(src/flask/sansio/blueprints.py)
+  ⎿  Read 693 lines
+
+                                                                                                                                   12:55 PM claude-opus-4-5-20251101
+⏺ Let me also check app.py to see how session saving works in the response flow.
+
+⏺ Search(pattern: "save_session|session_interface", path: "src/flask/app.py")
+  ⎿  Found 24 lines (ctrl+o to expand)
+
+                                                                                                                                   12:55 PM claude-opus-4-5-20251101
+⏺ Now I have the full picture. Here's the analysis:
+
+  Current Session Flow
+  1. Open session (ctx.py:381-393): AppContext._get_session() calls self.app.session_interface.open_session()
+  2. Save session (app.py:1415-1416): Flask.process_response() calls self.session_interface.save_session()
+
+  Key Challenge: Timing
+  In ctx.py:436-444, the session is opened before URL routing:
+
+  if self._request is not None:
+      self._get_session()      # Session opened FIRST
+      if self.url_adapter is not None:
+          self.match_request() # Blueprint determined AFTER
+
+  This means we don't yet know which blueprint will handle the request when the session is opened.
+
+  Entities That Need to Change
+  ┌────────────────────────────────────┬───────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                File                │          Entity           │                                              Change                                              │
+  ├────────────────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ src/flask/sansio/blueprints.py:119 │ Blueprint.__init__        │ Add `session_interface: SessionInterface                                                         │
+  ├────────────────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ src/flask/sansio/blueprints.py:119 │ Blueprint class           │ Store self.session_interface attribute                                                           │
+  ├────────────────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ src/flask/ctx.py:381               │ AppContext._get_session() │ Resolve session interface from matched blueprint (if available)                                  │
+  ├────────────────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ src/flask/ctx.py:436-444           │ AppContext.push()         │ Either: (a) reorder to route first, or (b) defer session opening until first access post-routing │
+  ├────────────────────────────────────┼───────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ src/flask/app.py:1415              │ Flask.process_response()  │ Use ctx.request.blueprints[0]'s session_interface for save_session() if set                      │
+  └────────────────────────────────────┴───────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Design Decision Required
+  You have two main options:
+
+  Option A - Deferred session loading: Move _get_session() to after match_request(). This changes the documented behavior that sessions are available to custom URL
+  converters.
+
+  Option B - Per-blueprint session save only: Keep global session opening but allow blueprints to override only save_session(). Simpler but less flexible.
+
+  Which direction interests you?</code></pre>
+                    </div>
+                </div>
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">With CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>I'll orient using the bearings file and then trace the session/blueprint interaction points.
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ Let me search for session-related entities and trace the current session flow.
+
+⏺ Bash(codeirsearch "session" --repo-path tests/testRepositories/_flask-main 2>/dev/null | head -40)
+  ⎿    SSSN                  AppContext.session                        src/flask/ctx.py:396  [method]
+       SSSNNTRFC             SessionInterface                          src/flask/sessions.py:100  [class]
+       GTCKDMN               SessionInterface.get_cookie_domain        src/flask/sessions.py:175  [method]
+     … +28 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirshow SSSNS --repo-path tests/testRepositories/_flask-main --level Behavior 2>/dev/null)
+  ⎿  Entity not found: SSSNS (level=Behavior)
+     Run `codeir index &lt;repo_path&gt;` first.
+
+
+⏺ Bash(codeirshow SSSNNTRFC --repo-path tests/testRepositories/_flask-main --level Behavior 2>/dev/null)
+  ⎿  Entity: SessionInterface  [class]
+     File:   src/flask/sessions.py:100
+     Level:  Behavior
+     … +2 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirshow GTSSSN --repo-path tests/testRepositories/_flask-main --level Behavior 2>/dev/null)
+  ⎿  Entity: AppContext._get_session  [method]
+     File:   src/flask/ctx.py:381
+     Level:  Behavior
+     … +2 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeircallers OPNSSSN --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿   ~APPCNTXT.02           AppContext                                src/flask/ctx.py  [fuzzy]
+      ~GTSSSN                AppContext._get_session                   src/flask/ctx.py  [fuzzy]
+      ~FLSKCLNT              FlaskClient                               src/flask/testing.py  [fuzzy]
+      ~SSSNTRNSCTN           FlaskClient.session_transaction           src/flask/testing.py  [fuzzy]
+
+
+⏺ Bash(codeirexpand GTSSSN --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿  Entity: AppContext._get_session  [method]
+     File:   src/flask/ctx.py:381-393
+     … +13 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirsearch "session_interface" --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿    TSTPNSSSNWTHNDPNT     test_open_session_with_endpoint           tests/test_session_interface.py:6  [function]
+       MYSSSNNTRFC           test_open_session_with_endpoint.MySessionInterface  tests/test_session_interface.py:12  [class]
+       OPNSSSN.04            test_open_session_with_endpoint.MySessionInterface.open_session  tests/test_session_interface.py:16  [method]
+     … +2 lines (ctrl+o to expand)
+
+
+⏺ Now let me check where save_session is called and trace the blueprint access in the request context.
+
+⏺ Bash(codeircallers SVSSSN --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿   ~FLSK                  Flask                                     src/flask/app.py  [fuzzy]
+      ~PRCSSRSPNS            Flask.process_response                    src/flask/app.py  [fuzzy]
+      ~FLSKCLNT              FlaskClient                               src/flask/testing.py  [fuzzy]
+      ~SSSNTRNSCTN           FlaskClient.session_transaction           src/flask/testing.py  [fuzzy]
+
+
+⏺ Bash(codeirgrep "save_session" --repo-path tests/testRepositories/_flask-main -v 2>/dev/null | head -50)
+  ⎿  6 matches across 6 entities and 0 unmatched regions
+
+       PRCSSRSPNS            Flask.process_response  [method]
+     … +24 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirexpand PRCSSRSPNS --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿  Entity: Flask.process_response  [method]
+     File:   src/flask/app.py:1394-1418
+     … +25 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirsearch "blueprint" --repo-path tests/testRepositories/_flask-main 2>/dev/null | head -30)
+  ⎿    BLPRNT.03             Request.blueprint                         src/flask/wrappers.py:162  [method]
+       BLPRNT                Blueprint                                 src/flask/blueprints.py:18  [class]
+       BLPRNT.02             Blueprint                                 src/flask/sansio/blueprints.py:119  [class]
+     … +22 lines (ctrl+o to expand)
+
+
+⏺ Let me check how blueprints are accessed during request processing and how the Blueprint class is structured.
+
+⏺ Bash(codeirexpand "BLPRNT.03" --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿  Entity: Request.blueprint  [method]
+     File:   src/flask/wrappers.py:162-178
+     … +17 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirexpand "INIT.18" --repo-path tests/testRepositories/_flask-main 2>/dev/null)
+  ⎿  Entity: Blueprint.__init__  [method]
+     File:   src/flask/sansio/blueprints.py:174-211
+     … +38 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirgrep "self.blueprints" --repo-path tests/testRepositories/_flask-main -C 2 2>/dev/null | head -40)
+  ⎿  2 matches across 2 entities and 0 unmatched regions
+
+       INIT.16               App.__init__  [method]
+     … +14 lines (ctrl+o to expand)
+
+
+⏺ Bash(codeirgrep "request.blueprints" --repo-path tests/testRepositories/_flask-main -C 2 2>/dev/null)
+  ⎿  7 matches across 7 entities and 0 unmatched regions
+
+       UPDTTMPLTCNTXT        Flask.update_template_context  [method]
+     … +28 lines (ctrl+o to expand)
+
+
+⏺ Based on my analysis, here's the architecture and what would need to change:
+
+  Current Session Flow
+
+  ┌──────┬──────────────────────────────┬───────────────────────────────────────────┐
+  │ Step │           Location           │                   Code                    │
+  ├──────┼──────────────────────────────┼───────────────────────────────────────────┤
+  │ Open │ ctx.py:381 _get_session      │ self.app.session_interface.open_session() │
+  ├──────┼──────────────────────────────┼───────────────────────────────────────────┤
+  │ Save │ app.py:1416 process_response │ self.session_interface.save_session()     │
+  └──────┴──────────────────────────────┴───────────────────────────────────────────┘
+
+  Both use a single app-wide session_interface attribute.
+
+  Entities That Need Changes
+
+  1. Blueprint.__init__ (sansio/blueprints.py:174)
+
+  Add a session_interface parameter:
+  def __init__(
+      self,
+      ...
+      session_interface: SessionInterface | None = None,  # NEW
+  ):
+      ...
+      self.session_interface = session_interface
+
+  2. AppContext._get_session (ctx.py:381)
+
+  Modify to check blueprint-specific interface first:
+  def _get_session(self) -> SessionMixin:
+      if self._session is None:
+          # Check for blueprint-specific session interface
+          bp_name = self.request.blueprint
+          si = None
+          if bp_name and bp_name in self.app.blueprints:
+              si = self.app.blueprints[bp_name].session_interface
+          si = si or self.app.session_interface  # fallback to app-wide
+
+          self._session = si.open_session(self.app, self.request)
+          ...
+
+  3. Flask.process_response (app.py:1394)
+
+  Same pattern for save_session:
+  if not self.session_interface.is_null_session(ctx._get_session()):
+      bp_name = ctx.request.blueprint
+      si = None
+      if bp_name and bp_name in self.blueprints:
+          si = self.blueprints[bp_name].session_interface
+      si = si or self.session_interface
+      si.save_session(self, ctx._get_session(), response)
+
+  4. FlaskClient.session_transaction (testing.py:136)
+
+  Also calls save_session directly — needs the same blueprint awareness.
+
+  Design Considerations
+
+  Nested blueprints: request.blueprints returns a list (parent → child). You'll need to decide precedence — probably innermost (most specific)
+  blueprint wins.
+
+  Consistency: The session must be opened and saved with the same interface. Consider caching the resolved interface on the context so _get_session
+  and process_response use the same one.
+
+  Pattern precedent: Flask already uses this exact pattern for after_request_funcs, error_handlers, and teardown_request_funcs — all iterate through
+  ctx.request.blueprints and fall back to app-wide handlers.
+
+  Want me to draft the implementation or explore any specific aspect further?</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ____________________________________Section: Beyond CodeIR______________________________
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>What This Means Beyond CodeIR</h2>
+            <p>
+                Right now, every AI coding tool — Cursor, Copilot, Claude Code, Aider — faces
+                the same fundamental problem: the representation they give models is optimized
+                for human editors, not machine reasoning. They compensate with clever retrieval,
+                expanded context windows, and brute-force file reading. It works, mostly.
+                Until it doesn't.
+            </p>
+            <p>
+                CodeIR is one answer. There will be others. The underlying insight is simple:
+                if you want an LLM to reason about architecture, give it an architectural
+                representation.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: The Current Landscape</div>
+
+            <p>The current landscape of approaches:</p>
+
+            <div class="workflow">
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-label">Brute Force Context</span>
+                    </div>
+                    <p>Magic.dev claims 100M token context. If you can fit the whole codebase, why retrieve? In practice, attention degrades over very long contexts, and cost scales linearly.</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-label">Embedding Retrieval</span>
+                    </div>
+                    <p>MPNet, Voyage, etc. Good at keyword-matchable tasks. Fails on structural reasoning because embeddings capture content similarity, not architectural relationships. Our benchmarks show retrieval accuracy decreasing as model capability increases.</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-label">Repo Maps</span>
+                    </div>
+                    <p>Aider's approach: file tree with function signatures. Better than raw source, but still file-oriented. Doesn't capture cross-file dependencies or behavioral signals.</p>
+                </div>
+                <div class="workflow-step workflow-step--last">
+                    <div class="workflow-step-header">
+                        <span class="workflow-label">CodeIR</span>
+                    </div>
+                    <p>Compile the codebase into a representation that matches how the model needs to reason. Orient first, narrow second, inspect last. The same workflow a senior developer follows — because that workflow exists for a reason.</p>
+                </div>
+            </div>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Limits & Scale</div>
+
+            <p class="todo-note">[TODO: One more unfamiliar repo test to validate the approach generalizes. Discussion of where CodeIR's approach breaks — repos with heavy metaprogramming or dynamic dispatch that AST analysis can't capture, non-Python languages.]</p>
+
+            <p>
+                Compression improves with repository scale. A small library has limited structural
+                redundancy — there's less to compress. A large framework like Django (41,819 entities)
+                has massive architectural repetition: hundreds of model classes following the same
+                patterns, view functions with identical structures, test files with standardized
+                layouts. CodeIR collapses that redundancy. The bigger the codebase, the stronger
+                the case for compiled architectural representations over raw source.
+            </p>
+        </div>
+    </section> -->
+  
+    <!-- ____________________________________CTA______________________________-->
+    <section class="content">
+        <div class="cta-block">
+            <p>
+                CodeIR is open source. <a href="#" class="cta-link">TODO: link</a>
+            </p>
+            <pre class="cta-install"><code>pip install codeir</code></pre>
+            <p class="cta-sub">Works with Claude Code out of the box.</p>
+        </div>
+    </section>
+
+      <!-- ____________________________________Claude Reviews Section______________________________-->
+  <section class="content">
+    <div class="claude-reviews-intro">
+        <h2>Wait, what does Claude think?</h2>
+        <p>
+            Since Claude is the primary "user" of CodeIR, I didn't want to just guess if it helped.
+            I asked him. During development, Claude's feedback was so specific that it actually shaped
+            the feature set.
+        </p>
+        <p>
+            For example, Claude found that while entity search was great, he still missed the "vibe"
+            of a classic grep. Based on that, we built <code>codeir grep</code>, which returns IR
+            context alongside regex matches.
+        </p>
+        <p>Here is what Claude had to say:</p>
+    </div>
+
+    <div class="claude-review-grid">
+
+        <div class="claude-feedback claude-review-card">
+            <div class="claude-header">
+                <span class="spark-icon">✨</span>
+                <span>Claude on SQLAlchemy</span>
+            </div>
+            <div class="claude-pullquote">
+                "I found the bug in ~6 queries across a 663-file, 38k-entity codebase. Without CodeIR, I'd have been grepping through the ORM internals much longer."
+            </div>
+            <button class="claude-expand-btn" onclick="toggleReview(this)">
+                <span class="claude-expand-arrow">&#9662;</span> Read full review
+            </button>
+            <div class="claude-review-full">
+                <p><strong>What worked well</strong></p>
+                <ol>
+                    <li><strong>Search was fast and effective</strong> — <code>codeir search "flush finalize"</code> immediately surfaced <code>FNLZFLSHCHNGS</code> (UOWTransaction.finalize_flush_changes). The compressed entity IDs made results scannable.</li>
+                    <li><strong>Behavior level was the sweet spot</strong> — <code>codeir show FNLZFLSHCHNGS --level Behavior</code> gave me:<br><br>
+                        <code>MT FNLZFLSHCHNGS C=_register_persistent,_remove_newly_deleted,difference,items,set F=IR A=3 #DB #CORE</code><br><br>
+                        This told me exactly what methods it calls without reading source. I knew where to look next.</li>
+                    <li><strong>Expand only when needed</strong> — I only used <code>codeir expand</code> twice. The Behavior level let me skip reading <code>_register_persistent</code> entirely until I needed to confirm the bug's impact.</li>
+                    <li><strong>Category filtering</strong> — <code>--category core_logic</code> helped cut through the 38k entities to find state-related logic quickly.</li>
+                </ol>
+
+                <p><strong>What could improve</strong></p>
+                <ol>
+                    <li><strong>Semantic search</strong> — <code>codeir search "list_only"</code> returned nothing because the term isn't in entity names. A grep-style content search would have helped here.<br>
+                    <span class="claude-dev-note">→ We added this suggestion when search returns no results, at Claude's suggestion</span></li>
+                    <li><strong>The ID compression is aggressive</strong> — <code>FNLZFLSHCHNGS</code> took me a moment to parse as "finalize_flush_changes". Readable once you get used to it, but there's a learning curve.</li>
+                </ol>
+
+                <p><strong>Overall</strong></p>
+                <p>The Orient → Behavior → Source workflow worked exactly as designed. I found the bug in ~6 queries across a 663-file, 38k-entity codebase. Without CodeIR, I'd have been grepping through the ORM internals much longer.</p>
+            </div>
+        </div>
+
+        <div class="claude-feedback claude-review-card">
+            <div class="claude-header">
+                <span class="spark-icon">✨</span>
+                <span>Claude on Django</span>
+            </div>
+            <div class="claude-pullquote">
+                "Going from Behavior to exact source with CodeIR expand was fast. I knew what I was looking for before reading the code."
+            </div>
+            <button class="claude-expand-btn" onclick="toggleReview(this)">
+                <span class="claude-expand-arrow">&#9662;</span> Read full review
+            </button>
+            <div class="claude-review-full">
+                <p>Ha! Happy to give feedback on CodeIR.</p>
+
+                <p><strong>What Worked Well</strong></p>
+                <ol>
+                    <li><strong>Search was effective</strong> — <code>codeir search descriptor cache related</code> quickly surfaced <code>ForwardManyToOneDescriptor.is_cached</code> and related entities. The multi-term OR ranking worked well.</li>
+                    <li><strong>Behavior level was genuinely useful</strong> — Seeing <code>CLS FRWRDMNYTNDSCRPTR C=ColPairs,RelatedObjectDoesNotExist,TupleIn,ValueError,_traverse_ancestors,allow_relation F=EILRT A=23</code> told me immediately this class does error handling, has conditionals/loops/returns/try-except, and talks to specific collaborators — without reading 200 lines of source.</li>
+                    <li><strong>The expand → source workflow</strong> — Going from Behavior to exact source with <code>codeir expand ISCCHD.03</code> was fast. I knew what I was looking for before reading the code.</li>
+                </ol>
+
+                <p><strong>What I Ended Up Doing Anyway</strong></p>
+                <ol>
+                    <li><strong>Fell back to Grep/Read for grep-style exploration</strong> — When I wanted to see all usages of <code>_result_cache</code> in query.py with context, I used Grep directly. CodeIR search is entity-oriented, which is great for "find the function that does X" but less suited for "show me every line mentioning Y."</li>
+                    <li><strong>Direct file reads for understanding flow</strong> — For the <code>__get__</code> method, I read a chunk of the file to see the full logic flow. The Behavior level told me what it calls, but I needed source to understand when and why.</li>
+                </ol>
+
+                <p><strong>Suggestions</strong></p>
+                <ol>
+                    <li><strong>codeir grep</strong> — A wrapper that returns IR context alongside grep matches could bridge the gap.<br>
+                    <span class="claude-dev-note">→ We added this feature at Claude's suggestion and he uses it often</span></li>
+                    <li>Caller results were good — I didn't use callers here but the <code>~</code> fuzzy marker is a nice touch for uncertain matches.</li>
+                </ol>
+
+                <p><strong>Overall</strong></p>
+                <p>It shortened the path from "where does Django cache related objects?" to "here's the exact line" significantly. The Django codebase is 41K entities — without the index, I'd have been grepping blind.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <p class="claude-reviews-cta">
+        If you use the tool we would love to hear about Claude's experience. We encourage you to ask
+        him and share his feedback (and yours) to <a href="#">SOMEWHERE</a>.
+    </p>
+  </section>
+
+  
+      <!-- ____________________________________Section End______________________________-->
+    </main>
+
+    <script>
+  function toggleLayer(button, layerClass) {
+    const section = button.closest('.layered-content');
+    const targetLayer = section.querySelector(`.${layerClass}-container`);
+
+    if (targetLayer) {
+        const isClosing = targetLayer.classList.contains('is-revealed');
+
+        if (isClosing) {
+            // Snap max-height to current actual height so CSS can animate from it
+            targetLayer.style.maxHeight = targetLayer.scrollHeight + 'px';
+            targetLayer.offsetHeight; // Force reflow
+            targetLayer.style.maxHeight = '';
+        }
+
+        const isOpening = targetLayer.classList.toggle('is-revealed');
+
+        // Sync icons
+        const allRelatedBtns = section.querySelectorAll(`[onclick*="'${layerClass}'"]`);
+        allRelatedBtns.forEach(btn => {
+            btn.querySelector('.plus-icon').textContent = isOpening ? '−' : '+';
+            btn.classList.toggle('active-toggle', isOpening);
+        });
+
+        // Remote button logic
+        const l2Layer = section.querySelector('.l2-container');
+        const l3Layer = section.querySelector('.l3-container');
+        const l3RemoteBtn = section.querySelector('.l3-remote');
+
+        if (l3RemoteBtn) {
+            if (!l2Layer.classList.contains('is-revealed') && l3Layer.classList.contains('is-revealed')) {
+                l3RemoteBtn.style.display = 'flex';
+            } else {
+                l3RemoteBtn.style.display = 'none';
+            }
+        }
+    }
+}
+
+// Claude review expand/collapse
+function toggleReview(btn) {
+    const card = btn.closest('.claude-review-card');
+    const full = card.querySelector('.claude-review-full');
+    const arrow = btn.querySelector('.claude-expand-arrow');
+    const isOpen = full.classList.toggle('is-open');
+
+    if (isOpen) {
+        full.style.maxHeight = full.scrollHeight + 'px';
+        arrow.innerHTML = '&#9652;';
+        btn.childNodes[btn.childNodes.length - 1].textContent = ' Hide full review';
+    } else {
+        full.style.maxHeight = full.scrollHeight + 'px';
+        full.offsetHeight;
+        full.style.maxHeight = '';
+        arrow.innerHTML = '&#9662;';
+        btn.childNodes[btn.childNodes.length - 1].textContent = ' Read full review';
+    }
+}
+
+// Remove max-height cap after review expand completes
+document.querySelectorAll('.claude-review-full').forEach(el => {
+    el.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'max-height' && el.classList.contains('is-open')) {
+            el.style.maxHeight = 'none';
+        }
+    });
+});
+
+// Remove max-height cap after open animation completes
+document.querySelectorAll('.hidden-layer').forEach(layer => {
+    layer.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'max-height' && layer.classList.contains('is-revealed')) {
+            layer.style.maxHeight = 'none';
+        }
+    });
+});
+      </script>
+</body>
+</html>

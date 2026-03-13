@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeIR — Contact</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="faq-header">
+        <div class="hero-overlay">
+            <h1><a href="index.html" class="faq-home-link">CodeIR</a></h1>
+            <p>Contact</p>
+        </div>
+    </header>
+
+    <!-- hamburger menu -->
+    <div class="menu-wrapper">
+      <button class="menu-btn" onclick="document.querySelector('.menu-dropdown').classList.toggle('menu-open')">
+          <span></span>
+          <span></span>
+          <span></span>
+      </button>
+      <nav class="menu-dropdown">
+          <a href="index.html">Home</a>
+          <a href="faq.html">FAQ</a>
+          <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+
+    <main class="container" style="text-align: center; padding-top: 100px;">
+        <p style="font-size: 1.1rem; opacity: 0.7; margin-bottom: 24px;">Get in touch</p>
+        <a href="mailto:hello@codeir.dev" style="color: var(--accent-L2); font-size: 1.4rem; text-decoration: none; font-family: var(--mono-font);">hello@codeir.dev</a>
+    </main>
+
+</body>
+</html>
