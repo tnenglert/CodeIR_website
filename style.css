@@ -335,10 +335,173 @@ body {
   border-radius: 3px;
 }
 
-/* Stack on mobile */
+/* ======================== Mobile Responsive ======================== */
 @media (max-width: 900px) {
   .terminal-comparison {
     flex-direction: column;
+    width: 100%;
+    margin-left: 0;
+    transform: none;
+    padding: 0;
+  }
+
+  .ir-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Hero — fixed attachment breaks on iOS */
+  .hero-header {
+    height: 300px;
+    background-attachment: scroll;
+  }
+
+  .hero-overlay h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-overlay p {
+    font-size: 0.9rem;
+  }
+
+  /* Container */
+  .container {
+    padding: 30px 14px;
+  }
+
+  /* Section headings */
+  .layered-content h2 {
+    font-size: 1.3rem;
+  }
+
+  /* Action buttons — wrap and shrink */
+  .action-bar {
+    flex-wrap: wrap;
+  }
+
+  .reveal-btn {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+  }
+
+  /* Terminal windows */
+  .terminal-body {
+    max-height: 300px;
+    padding: 10px;
+  }
+
+  .terminal-body pre {
+    font-size: 0.65rem;
+    line-height: 1.4;
+  }
+
+  .terminal-label {
+    font-size: 0.65rem;
+  }
+
+  /* Terminal comparison — full width stacked */
+  .terminal-comparison {
+    width: 100%;
+    margin-left: 0;
+    transform: none;
+    padding: 0;
+    gap: 12px;
+  }
+
+  /* Data tables — scroll horizontally */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    font-size: 0.75rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+
+  /* Workflow cards */
+  .workflow-step {
+    padding: 12px 14px;
+  }
+
+  .workflow-label {
+    font-size: 0.88rem;
+  }
+
+  .workflow-step p {
+    font-size: 0.82rem;
+  }
+
+  /* IR cards */
+  .ir-card {
+    padding: 14px;
+  }
+
+  .ir-card-name {
+    font-size: 1rem;
+  }
+
+  /* L2/L3 containers */
+  .l2-container,
+  .l3-container {
+    padding-left: 10px;
+  }
+
+  /* CTA block */
+  .cta-install {
+    padding: 12px 18px;
+    font-size: 0.85rem;
+  }
+
+  /* Claude reviews */
+  .claude-reviews-intro h2 {
+    font-size: 1.4rem;
+  }
+
+  .claude-feedback {
+    padding: 14px;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    padding: 10px 14px;
+    margin: 1rem 0;
+  }
+
+  /* FAQ page */
+  .faq-header {
+    height: 150px;
+  }
+
+  .faq-home-link {
+    font-size: 2rem;
+  }
+
+  .faq-question {
+    padding: 12px 14px;
+    font-size: 0.88rem;
+  }
+
+  .faq-answer {
+    padding: 0 14px;
+  }
+
+  .faq-open .faq-answer {
+    padding: 0 14px 12px;
+  }
+
+  .faq-answer pre {
+    font-size: 0.7rem;
+    padding: 10px 12px;
+  }
+
+  /* General pre blocks */
+  pre {
+    font-size: 0.75rem;
+    padding: 10px;
   }
 }
 
