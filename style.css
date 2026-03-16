@@ -45,92 +45,73 @@ body {
   color: var(--CodeIR-color);
 }
 
-/* Hamburger Menu — Overlay Style */
-.menu-bar {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+/* Hamburger Menu */
+.menu-wrapper {
+  position: sticky;
+  top: 0;
   display: flex;
   justify-content: flex-end;
-  padding: 20px 20px 0;
-  position: relative;
-  z-index: 200;
+  padding: 12px 20px;
+  z-index: 10;
 }
 
-.hamburger {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
+.menu-btn {
   background: none;
   border: none;
-  padding: 4px;
-  position: relative;
-  z-index: 200;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+  margin-left: auto;
 }
 
-.hamburger .bar {
-  width: 20px;
-  height: 1.5px;
+.menu-btn:hover {
+  opacity: 0.7;
+}
+
+.menu-btn span {
+  display: block;
+  width: 18px;
+  height: 2px;
   background: var(--text-primary);
-  opacity: 0.3;
   border-radius: 1px;
   transition: all 0.3s ease;
 }
 
-.hamburger:hover .bar {
-  opacity: 0.7;
-}
-
-.hamburger.open .bar:nth-child(1) {
-  transform: rotate(45deg) translate(4.5px, 4.5px);
-  opacity: 0.7;
-}
-.hamburger.open .bar:nth-child(2) {
-  opacity: 0;
-}
-.hamburger.open .bar:nth-child(3) {
-  transform: rotate(-45deg) translate(4.5px, -4.5px);
-  opacity: 0.7;
-}
-
-.menu-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(13, 17, 23, 0.95);
-  backdrop-filter: blur(20px);
-  z-index: 150;
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 36px;
+  gap: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transform: translateY(5px);
+  transition: all 0.3s ease;
+  z-index: 10;
 }
 
-.menu-overlay.open {
+.menu-dropdown.menu-open {
   opacity: 1;
-  pointer-events: all;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
-.menu-overlay a {
-  font-family: 'Inter', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 500;
+.menu-dropdown a {
   color: var(--text-primary);
-  opacity: 0.4;
   text-decoration: none;
-  transition: opacity 0.2s ease;
-  letter-spacing: -0.01em;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+  text-align: right;
 }
 
-.menu-overlay a:hover {
+.menu-dropdown a:hover {
   opacity: 1;
 }
 
