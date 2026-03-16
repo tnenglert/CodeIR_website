@@ -223,6 +223,34 @@
   .result-line .entity-file { color: var(--text-dim); font-weight: 300; min-width: 80px; display: inline-block; margin-right: 4px; }
   .result-line .entity-type { color: var(--amber); }
 
+  .detail-line {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: lineIn 0.3s ease forwards;
+    font-size: 0.544rem;
+    line-height: 1.5;
+    padding-left: 16px;
+  }
+
+  .detail-line .label { color: var(--text-dim); min-width: 44px; display: inline-block; }
+  .detail-line .value { color: var(--text); }
+  .detail-line .value-dim { color: var(--text-dim); font-weight: 300; }
+
+  .truncation-line {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    opacity: 0;
+    animation: lineIn 0.3s ease forwards;
+    font-size: 0.544rem;
+    line-height: 1.5;
+    padding-left: 16px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
   .line-gap { height: 6px; }
 
   /* Stagger animation */
@@ -248,15 +276,21 @@
   .terminal:last-child .terminal-body > :nth-child(4) { animation-delay: 1.6s; }
   .terminal:last-child .terminal-body > :nth-child(5) { animation-delay: 1.75s; }
   .terminal:last-child .terminal-body > :nth-child(6) { animation-delay: 1.9s; }
-  .terminal:last-child .terminal-body > :nth-child(7) { animation-delay: 2.05s; }
-  .terminal:last-child .terminal-body > :nth-child(8) { animation-delay: 2.2s; }
-  .terminal:last-child .terminal-body > :nth-child(9) { animation-delay: 2.35s; }
-  .terminal:last-child .terminal-body > :nth-child(10) { animation-delay: 2.7s; }
-  .terminal:last-child .terminal-body > :nth-child(11) { animation-delay: 3.1s; }
-  .terminal:last-child .terminal-body > :nth-child(12) { animation-delay: 3.3s; }
-  .terminal:last-child .terminal-body > :nth-child(13) { animation-delay: 3.7s; }
-  .terminal:last-child .terminal-body > :nth-child(14) { animation-delay: 3.9s; }
-  .terminal:last-child .terminal-body > :nth-child(15) { animation-delay: 4.3s; }
+  .terminal:last-child .terminal-body > :nth-child(7) { animation-delay: 2.1s; }
+  .terminal:last-child .terminal-body > :nth-child(8) { animation-delay: 2.5s; }
+  .terminal:last-child .terminal-body > :nth-child(9) { animation-delay: 2.7s; }
+  .terminal:last-child .terminal-body > :nth-child(10) { animation-delay: 2.85s; }
+  .terminal:last-child .terminal-body > :nth-child(11) { animation-delay: 3.0s; }
+  .terminal:last-child .terminal-body > :nth-child(12) { animation-delay: 3.4s; }
+  .terminal:last-child .terminal-body > :nth-child(13) { animation-delay: 3.6s; }
+  .terminal:last-child .terminal-body > :nth-child(14) { animation-delay: 3.75s; }
+  .terminal:last-child .terminal-body > :nth-child(15) { animation-delay: 4.1s; }
+  .terminal:last-child .terminal-body > :nth-child(16) { animation-delay: 4.3s; }
+  .terminal:last-child .terminal-body > :nth-child(17) { animation-delay: 4.45s; }
+  .terminal:last-child .terminal-body > :nth-child(18) { animation-delay: 4.8s; }
+  .terminal:last-child .terminal-body > :nth-child(19) { animation-delay: 4.95s; }
+  .terminal:last-child .terminal-body > :nth-child(20) { animation-delay: 5.1s; }
+  .terminal:last-child .terminal-body > :nth-child(21) { animation-delay: 5.5s; }
 
   @keyframes lineIn {
     from { opacity: 0; transform: translateY(4px); }
@@ -503,17 +537,24 @@
         <div class="line"><span class="output">╸ codebase mapped — 247 modules</span></div>
         <div class="line-gap"></div>
         <div class="line"><span class="prompt">⏺</span><span class="cmd">codeir search</span><span class="path">cached_db session</span></div>
-        <div class="result-line"><span class="entity-id">INIT.205</span><span class="entity-name">SessionStore.__init__</span><span class="entity-file">cached_db.py:23</span><span class="entity-type">[method]</span></div>
         <div class="result-line"><span class="entity-id">SAVE.11</span><span class="entity-name">SessionStore.save</span><span class="entity-file">cached_db.py:88</span><span class="entity-type">[method]</span></div>
-        <div class="result-line"><span class="entity-id">ASV.03</span><span class="entity-name">SessionStore.asave</span><span class="entity-file">cached_db.py:95</span><span class="entity-type">[async_method]</span></div>
-        <div class="result-line"><span class="entity-id">LOAD.03</span><span class="entity-name">SessionStore.load</span><span class="entity-file">cached_db.py:34</span><span class="entity-type">[method]</span></div>
-        <div class="result-line"><span class="entity-id">DLT.04</span><span class="entity-name">SessionStore.delete</span><span class="entity-file">cached_db.py:106</span><span class="entity-type">[method]</span></div>
+        <div class="result-line"><span class="entity-id">ASV.03</span><span class="entity-name">SessionStore.asave</span><span class="entity-file">cached_db.py:95</span><span class="entity-type">[async]</span></div>
+        <div class="truncation-line">… +12 more (ctrl+o to expand)</div>
         <div class="line-gap"></div>
         <div class="line"><span class="prompt">⏺</span><span class="cmd">codeir show</span><span class="accent">SAVE.11</span><span class="flag">--level L1</span></div>
-        <div class="line"><span class="output">╸ SessionStore.save — signature + intent</span></div>
+        <div class="detail-line"><span class="label">Entity:</span><span class="value">SessionStore.save</span><span class="value-dim">&nbsp; [method]</span></div>
+        <div class="detail-line"><span class="label">File:</span><span class="value-dim">cached_db.py:88</span></div>
+        <div class="truncation-line">… +2 lines (ctrl+o to expand)</div>
+        <div class="line-gap"></div>
+        <div class="line"><span class="prompt">⏺</span><span class="cmd">codeir impact</span><span class="accent">SAVE.11</span><span class="flag">--depth 2</span></div>
+        <div class="detail-line"><span class="label"></span><span class="value-dim">Affected: 12 entities across 5 files</span></div>
+        <div class="truncation-line">… +8 lines (ctrl+o to expand)</div>
         <div class="line-gap"></div>
         <div class="line"><span class="prompt">⏺</span><span class="cmd">codeir expand</span><span class="accent">SAVE.11</span></div>
-        <div class="line"><span class="success">╸ lines 88–93 loaded — ready to implement</span></div>
+        <div class="detail-line"><span class="label">File:</span><span class="value-dim">cached_db.py:88–93</span></div>
+        <div class="truncation-line">… +6 lines (ctrl+o to expand)</div>
+        <div class="line-gap"></div>
+        <div class="line"><span class="success">⏺ Ready to implement</span></div>
       </div>
     </div>
 
