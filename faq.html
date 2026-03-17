@@ -11,7 +11,7 @@
 
     <header class="faq-header">
         <div class="hero-overlay">
-            <h1><a href="how_it_works.html" class="faq-home-link">CodeIR</a></h1>
+            <h1><a href="index.html" class="faq-home-link">CodeIR</a></h1>
             <p>Frequently Asked Questions</p>
         </div>
     </header>
@@ -130,9 +130,10 @@ Source:   [FN RDTKN @auth/tokens.py:47]
             </button>
             <div class="faq-answer">
                 <p>
-                    It's not a single compression ratio — it's a multi-level system. For Flask
-                    (83 files, 1,629 entities), the full Index representation of every entity
-                    fits in roughly 15–20x fewer tokens than the raw source.
+                    Compression depends on repo size. Flask (1,629 entities) compresses
+                    about 8:1 — roughly 148k tokens of raw Python down to 19k in the Index.
+                    Larger codebases compress better: Tryton hits 13:1, SQLAlchemy 11:1,
+                    Django 10:1.
                 </p>
                 <p>
                     But the point isn't "make the repo smaller." It's that Claude can hold the
@@ -140,11 +141,10 @@ Source:   [FN RDTKN @auth/tokens.py:47]
                     only for the specific entities it needs to edit.
                 </p>
                 <p>
-                    In our tests, Claude consumed ~350 lines of content to produce the same
-                    analysis that required ~1,620 lines of raw source reading without the tool.
-                    Instead of reading 120k tokens and hoping you picked the right files, you
-                    read 8k tokens of orientation and then surgically retrieve the 2k tokens of
-                    source you actually need.
+                    In our SQLAlchemy test, Claude found a bug across a 663-file codebase
+                    using 82% fewer input tokens than the baseline — 368k vs 2.06M. Instead
+                    of reading source files to orient, it queried the IR, inspected one
+                    behavior summary, and expanded the 20 lines of source that mattered.
                 </p>
             </div>
         </div>
@@ -189,7 +189,7 @@ Source:   [FN RDTKN @auth/tokens.py:47]
             </button>
             <div class="faq-answer">
                 <p>
-                    At Index level, CodeIR fits roughly 20,000 entities per 200k context window.
+                    At Index level, CodeIR fits roughly 18,000 entities per 200k context window.
                     For reference, Django is ~41,000 entities and Tryton is ~20,000.
                 </p>
                 <p>
@@ -393,6 +393,20 @@ Source:   [FN RDTKN @auth/tokens.py:47]
                 </p>
             </div>
         </div>
+ <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>Why is this only available for Claude?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    Claude is the first. We are actively working on Codex support. 
+                    The underlying IR format and CLI are model-agnostic. The only Claude-specific 
+                    part is the prompt templates and evaluation scripts which will be adapted 
+                    for other models.
+                </p>
+            </div>
+        </div>
 
         <div class="faq-item">
             <button class="faq-question" onclick="toggleFaq(this)">
@@ -413,7 +427,7 @@ Source:   [FN RDTKN @auth/tokens.py:47]
                     </thead>
                     <tbody>
                         <tr><td>Flask</td><td>83</td><td>1,629</td></tr>
-                        <tr><td>SQLAlchemy</td><td>689</td><td>38,672</td></tr>
+                        <tr><td>SQLAlchemy</td><td>663</td><td>38,672</td></tr>
                         <tr><td>Django</td><td>2,894</td><td>41,819</td></tr>
                         <tr><td>Tryton</td><td>2,375</td><td>20,457</td></tr>
                     </tbody>

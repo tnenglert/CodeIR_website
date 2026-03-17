@@ -60,9 +60,7 @@
                 <p>
                   LLMs never get that representation.
                   They get raw code.</p>
-                <p>
-                    
-                
+
                 <div class="action-bar">
                   <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
                       <span class="plus-icon">+</span> Explanation
@@ -185,8 +183,6 @@
 
         <div class="l2-container hidden-layer">
             <div class="depth-tag-L2">How They Got There</div>
-
-            <h4>How They Got There</h4>
             <p>
                 The bug was a subtle filter gap in <code>finalize_flush_changes</code>, the method that marks objects clean after a flush. The delete set correctly filters out list-only states with <code>and not listonly</code>. But the leftover set (<code>other = states.difference(isdel)</code>) doesn't apply the same filter, so cascade-pulled objects that were never modified flow into <code>_register_persistent()</code> and silently pollute the identity map. Each file reads fine on its own. The problem only surfaces when you trace the data flow across the set arithmetic and the downstream call.
             </p>
@@ -209,7 +205,7 @@
             <div class="depth-tag-L3">SQLAlchemy Bug Diagnosis: Full Breakdown</div>
 
             <p>
-                I introduced a single-line bug into SQLAlchemy's unit-of-work system and asked Claude Opus 4.6 to find it twice: once without CodeIR and once with it.
+                I introduced a single-line bug into SQLAlchemy's unit-of-work system and asked Claude Opus 4.5 to find it twice: once without CodeIR and once with it.
             </p>
             <p>
                 SQLAlchemy is 663 files and 38,672 entities. The bug was in <code>finalize_flush_changes</code>, the method that marks objects as clean or deleted after a flush. The delete set correctly filters list-only states: <code>if isdelete and not listonly</code>. But the non-delete set is computed as <code>other = states.difference(isdel)</code>, which captures everything not being deleted, including list-only states that were pulled in by cascade but never modified. These flow into <code>_register_persistent()</code>, which replaces their identity map entries and resets their committed-state snapshots even though no SQL was emitted. Downstream queries then return stale in-memory data instead of re-loading from the database.
@@ -2203,7 +2199,7 @@ Now I can propose a comprehensive plan.
             <div class="depth-tag-L3">Flask Session Override: Full Breakdown</div>
 
             <p>
-                I asked Claude Opus 4.6 to design per-blueprint session overrides for Flask (83 files, 1,629 entities). Each blueprint should be able to specify its own session interface instead of using the app-wide one. I ran it twice: once without CodeIR and once with it.
+                I asked Claude Opus 4.5 to design per-blueprint session overrides for Flask (83 files, 1,629 entities). Each blueprint should be able to specify its own session interface instead of using the app-wide one. I ran it twice: once without CodeIR and once with it.
             </p>
             <p>
                 Both runs arrived at the same diagnosis and the same design. The core constraint is timing: <code>AppContext._get_session()</code> fires before <code>match_request()</code> resolves which blueprint will handle the request. You can't override the session interface per-blueprint if the session is already open before the blueprint is known. Both runs identified the same five entities that need modification and surfaced the same tradeoff between deferred session loading and per-blueprint save-only.
