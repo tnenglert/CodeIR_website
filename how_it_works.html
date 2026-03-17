@@ -151,23 +151,17 @@
         <div class="l1-container">
             <h2>What Happens When the Model Actually Understands the System</h2>
             <p>
-              I asked Claude how to handle tax rates that change mid-period 
-              in Tryton's reporting module.
-              Two runs: baseline Claude, and CodeIR-enabled Claude.
+              I asked Claude how to handle tax rates that change mid-period in Tryton's reporting module. Both sessions found the surface problem immediately: reporting queries collapse transactions across rate changes into a single total. The baseline fixed the queries: group by rate, split the rows, done.
             </p>
             <p>
-              The baseline proposed a reasonable fix. It was also wrong. It 
-              patched the symptom of a deeper architectural gap. Claude with CodeIR
-               traced the system deeper and discovered the real problem, then 
-              proposed a fundamentally different fix.  
-         
-        
+              The CodeIR session followed the data further upstream and noticed something more fundamental: each tax line points to a live tax configuration record. There's no snapshot. If an admin edits a tax rate next Tuesday, every invoice that ever referenced it — 2024, 2023, whenever — silently rewrites itself in the next report run. The reporting fix would faithfully aggregate the wrong historical numbers.
             </p>
-            One plan patched the report.
-          </p>
-          <p>
-            The other fixed the system.
-          </p>
+            <p>
+              So instead of patching the query it proposed capturing the effective rate on each tax line when the transaction is created. Once an invoice is posted its tax rate becomes a fact about that transaction, not a pointer to a configuration someone can change later.
+            </p>
+            <p>
+              Baseline reasoning stopped at the reporting layer. CodeIR reasoning traced the data lifecycle.
+            </p>
           
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
@@ -184,38 +178,24 @@
 
             <h4>What the baseline missed</h4>
             <p>
-                Tryton's architecture doesn't store historical tax rates. The baseline plan
-                assumes that if we know the date of the invoice and the tax code, we can
-                "guess" the rate by looking at the Tax configuration. It relies on
-                "time-of-report" logic.
+                The baseline read the reporting queries, found the aggregation problem, and fixed it: group by tax.rate, split the rows. Clean, minimal, correct… as long as nobody edits a Tax record after invoices have been posted against it.
             </p>
             <p>
-                If someone changes a tax rate in the settings retroactively, your historical
-                reports might change unexpectedly because the "detection helper" finds the
-                new rate instead of the one used a year ago.
+                But TaxLine doesn't store the rate that was used. It stores a foreign key to the Tax record: a live configuration object. The reporting fix joins back to that table at query time, so the report is only as reliable as the assumption that the Tax record still reflects what was true when the transaction happened.
             </p>
             <p>
-                The baseline didn't catch this because it couldn't see it. It was reading
-                individual files and reasoning about the code in front of it. The absence
-                of a rate history model isn't visible in any single file. It's a structural
-                gap in the architecture - something you can only see when you can see the
-                whole system at once.
+                The baseline didn't catch this because the vulnerability isn't visible in any single file. The reporting code looks fine. The Tax model looks fine. The TaxLine model looks fine. The problem lives in the relationship between them: a mutable record standing in for an immutable fact.
             </p>
 
             <h4>What CodeIR found</h4>
             <p>
-                The architecture itself was missing a rate history model. Using this fix
-                would allow the user to prove exactly which rate version was applied to a
-                specific invoice in 2024, even if the rate changed five times since then.
+                The CodeIR session traced the data lifecycle: how tax lines are created, what they store, and what they reference. That upstream exploration exposed the dependency on a mutable record and led to a different fix: capture the effective rate directly on TaxLine at write time.
             </p>
             <p>
-                The SQL queries in reports become simpler because the rate_version is
-                already stamped on the TaxLine. This real fix required a schema change,
-                a migration, and new entity relationships - not a reporting patch.
+                It's a small schema change: one new field populated when the invoice is created. But it moves the guarantee from the report logic into the data model. Once a transaction is posted its tax rate becomes a recorded fact, not a live lookup. The reporting fix still applies: you still group by rate. But now you're grouping by a value that can't be silently rewritten.
             </p>
             <p>
-                CodeIR's model identified this because it had the architectural map.
-                It could see what the system <em>didn't</em> have, not just what it did.
+                CodeIR didn't stop at the reporting layer. It followed the data upstream and found a missing boundary between what the system configures and what it records.
             </p>
             
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
@@ -226,98 +206,73 @@
         <div class="l3-container hidden-layer">
             <div class="depth-tag-L3">Case Study: Tryton Tax Reporting Refactor</div>
 
-            <p>
-                I asked Claude Opus to plan a refactor of Tryton's tax reporting module.
-                The task: split period aggregation at rate-change boundaries so mid-period
-                tax rate changes produce correct subtotals. Same prompt both times, once
-                without CodeIR and once with it.
-            </p>
-            <p>Tryton is 2,375 files and 20,457 entities.</p>
+            <p>Same prompt, same repo (2,375 files, 20,457 entities). Once without CodeIR, once with it.</p>
 
-            <h4>Results</h4>
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Run</th>
-                        <th>Input tokens</th>
-                        <th>Output tokens</th>
+                        <th>Turns</th>
+                        <th>Total tokens</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Baseline (no CodeIR)</td>
-                        <td>385,760</td>
-                        <td>2,744</td>
+                        <td>Baseline</td>
+                        <td>20</td>
+                        <td>696,106</td>
                     </tr>
                     <tr>
                         <td>CodeIR</td>
-                        <td>1,285,335</td>
-                        <td>5,100</td>
+                        <td>33</td>
+                        <td>981,790</td>
                     </tr>
                 </tbody>
             </table>
-            <p><strong>CodeIR used 3.3x more tokens. It also produced the only correct plan.</strong></p>
 
-            <h4>What happened</h4>
+            <h4>Baseline Plan</h4>
             <p>
-                Both runs identified the right files and the right general problem. Both
-                proposed phased implementations with reasonable structure. At a glance,
-                both look competent. The difference is architectural.
+                Core strategy: Modify aggregation queries to GROUP BY the effective tax rate, then report separate subtotals per rate within each period.
             </p>
-            <p>
-                The CodeIR run explored the data model in depth. It inspected Tax, TaxLine,
-                InvoiceLine._compute_taxes, and traced how rates flow through the system.
-                It discovered that Tax.rate is a single mutable value with no history.
-                Based on that, it proposed a new TaxRateVersion model that stores rate
-                changes over time and links each TaxLine to the version used at computation
-                time. Transactions remember the exact rate applied. Reports group by version.
-            </p>
-            <p>
-                The baseline run read reporting_tax.py, the tax model, and the move line
-                structure. It proposed detecting rate changes and splitting reporting
-                periods into sub-periods, computing separate subtotals per rate window.
-                It keeps the existing schema and reconstructs the rate history at report time.
-            </p>
+            <ol>
+                <li><strong>Phase 1:</strong> Add <code>get_rate_periods()</code> helper to detect rate boundaries within a period</li>
+                <li><strong>Phase 2:</strong> Refactor <code>AEAT303.get_context()</code> to compute separate subtotals per rate-effective sub-period</li>
+                <li><strong>Phase 3:</strong> Update <code>ESVATList.table_query()</code> and <code>ESVATBook.table_query()</code> GROUP BY to include <code>tax.rate</code></li>
+            </ol>
 
-            <h4>Why this matters</h4>
+            <h4>CodeIR Plan</h4>
             <p>
-                The baseline plan has a fatal flaw. It assumes you can reconstruct which
-                rate applied to a past transaction. You can't. Tax.rate is a single value.
-                When it changes from 21% to 22%, the old value is gone. January invoices
-                computed at 21% now live in a system that only knows about 22%. The
-                baseline plan will misreport those invoices or attempt date-based inference
-                that breaks on edits.
+                Core strategy: Capture the effective rate on TaxLine at write time. Report against the stored value.
             </p>
-            <p>
-                The CodeIR plan avoids this entirely. Each transaction stores which rate
-                version was used. Historical data is never dependent on mutable configuration.
-                This is standard practice in production accounting systems.
-            </p>
-            <p>
-                <strong>One plan is a data model fix. The other is a reporting patch that
-                produces incorrect results after rate edits.</strong> In an accounting
-                system, that distinction matters.
-            </p>
+            <p><strong>Phase 1 — Schema:</strong> Add <code>effective_rate</code> field to TaxLine. Migration adds the column with NULL for historical records.</p>
+            <p><strong>Phase 2 — Capture:</strong> Populate <code>effective_rate</code> at every TaxLine creation point:</p>
+            <ul>
+                <li><code>InvoiceTax.get_move_lines</code></li>
+                <li><code>InvoiceLine._compute_taxes</code></li>
+                <li><code>POSSale.get_tax_move_lines</code></li>
+            </ul>
+            <p><strong>Phase 3 — Reporting:</strong> Add <code>tax_line.effective_rate</code> to SELECT and GROUP BY in <code>ESVATList.table_query()</code>.</p>
 
-            <h4>Why the token difference is the wrong metric</h4>
-            <p>
-                CodeIR used 3.3x more tokens because it explored more of the codebase. It
-                traced across module boundaries, inspected entity relationships, and built
-                a structural understanding of how rates flow through computation into
-                storage. That exploration is what revealed that Tax.rate has no history,
-                which is the insight that makes the entire plan correct.
-            </p>
-            <p>The baseline saved tokens by reading fewer files. It proposed a plan faster. The plan was wrong.</p>
+            <h4>Key files</h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>modules/account/tax.py:1337</td><td>Add <code>effective_rate</code> field to TaxLine</td></tr>
+                    <tr><td>modules/account_invoice/invoice.py:3326</td><td>Store rate in <code>InvoiceTax.get_move_lines</code></td></tr>
+                    <tr><td>modules/account_invoice/invoice.py:3023</td><td>Store rate in <code>InvoiceLine._compute_taxes</code></td></tr>
+                    <tr><td>modules/account_es/reporting_tax.py:428</td><td>Group by rate in <code>table_query</code></td></tr>
+                    <tr><td>modules/account_es/reporting_tax.py:392</td><td>Add rate field to ESVATList model</td></tr>
+                </tbody>
+            </table>
 
-            <h4>Takeaway</h4>
-            <p>
-                On architectural planning tasks, CodeIR changes the depth of exploration,
-                not just the cost. The agent follows more connections, inspects more
-                relationships, and discovers structural constraints that surface-level
-                file reading misses. The result is plans grounded in how the system
-                actually works, not how it appears from skimming one module.
-            </p>
-            <p><em>Global Optimizations cost more tokens than Local Optimizations. Sometimes that's the point.</em></p>
+
+            <!-- REMOVED: Detailed baseline/CodeIR plans and terminal comparison windows.
+                 Terminal comparison CSS is preserved in style.css for use elsewhere.
 
             <hr>
 
@@ -1202,6 +1157,7 @@ Now I can propose a comprehensive plan.
               </div>
           </div>
         </div>
+            END REMOVED -->
       </div>
     </section>
 
