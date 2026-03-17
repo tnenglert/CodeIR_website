@@ -146,6 +146,976 @@
                 </p>
             </div>
         </section>
+    <!-- ____________________________________Section 6: Case Study 2______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>Claude Already Knows It Needs a Map — But It's Drawing One from Scratch</h2>
+            <p>
+                I planted a single-line bug in SQLAlchemy’s unit-of-work system and gave Claude only the symptoms. Both runs found the same bug and proposed the same fix.
+            </p>
+            <p>
+                The difference was how they got there.
+            </p>
+            <p>
+                Without CodeIR, Claude spun up a subagent and started reading the codebase file by file, consuming 1.8 million tokens just to orient itself before it could reason about the problem. With CodeIR, it didn’t need to. It queried the IR, inspected a single entity’s behavior, pulled a small slice of source, and had the answer.
+            </p>
+            <p>
+                Same diagnosis. Same fix. Completely different path to get there.
+            </p>
+            <p>
+                Claude already tries to understand the system before acting. CodeIR just gives it the map.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Baseline vs. CodeIR</div>
+
+            <h4>How They Got There</h4>
+            <p>
+                The bug was a subtle filter gap in <code>finalize_flush_changes</code>, the method that marks objects clean after a flush. The delete set correctly filters out list-only states with <code>and not listonly</code>. But the leftover set (<code>other = states.difference(isdel)</code>) doesn't apply the same filter, so cascade-pulled objects that were never modified flow into <code>_register_persistent()</code> and silently pollute the identity map. Each file reads fine on its own. The problem only surfaces when you trace the data flow across the set arithmetic and the downstream call.
+            </p>
+            <p>
+                Without CodeIR, Claude recognized it needed to orient before reasoning about the problem. It spawned a subagent that made 45 API calls, reading source files across the ORM layer to build a working understanding of the flush machinery. The main agent then used that context to read targeted sections and identify the bug. Total: 54 API calls, 2.06 million input tokens.
+            </p>
+            <p>
+                With CodeIR, that orientation step was already done. The agent searched the IR for flush-related entities, inspected one behavior summary to see the call graph, and expanded the 20 lines of source that mattered. Total: 14 API calls, 368k input tokens.
+            </p>
+            <p>
+                82% fewer input tokens. 74% fewer API calls. Same diagnosis, same fix.
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">SQLAlchemy Bug Diagnosis: Full Breakdown</div>
+
+            <p>
+                I introduced a single-line bug into SQLAlchemy's unit-of-work system and asked Claude Opus 4.6 to find it twice: once without CodeIR and once with it.
+            </p>
+            <p>
+                SQLAlchemy is 663 files and 38,672 entities. The bug was in <code>finalize_flush_changes</code>, the method that marks objects as clean or deleted after a flush. The delete set correctly filters list-only states: <code>if isdelete and not listonly</code>. But the non-delete set is computed as <code>other = states.difference(isdel)</code>, which captures everything not being deleted, including list-only states that were pulled in by cascade but never modified. These flow into <code>_register_persistent()</code>, which replaces their identity map entries and resets their committed-state snapshots even though no SQL was emitted. Downstream queries then return stale in-memory data instead of re-loading from the database.
+            </p>
+            <p>The prompt described symptoms, not locations:</p>
+            <blockquote>
+                "After a flush that involves relationship cascades, objects that were only pulled in as part of the cascade end up polluting the identity map as if they'd been persisted. Downstream queries return stale data. It only breaks with a mix of dirty objects and their unmodified related objects."
+            </blockquote>
+
+            <h4>Results</h4>
+            <p>Both runs found and correctly diagnosed the bug.</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>API calls</th>
+                        <th>Tool calls</th>
+                        <th>Input tokens</th>
+                        <th>Output tokens</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Baseline (no CodeIR)</td>
+                        <td>54</td>
+                        <td>53</td>
+                        <td>2,061,000</td>
+                        <td>9,770</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR</td>
+                        <td>14</td>
+                        <td>14</td>
+                        <td>368,000</td>
+                        <td>2,251</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reduction</strong></td>
+                        <td><strong>74%</strong></td>
+                        <td><strong>74%</strong></td>
+                        <td><strong>82%</strong></td>
+                        <td><strong>77%</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>What Happened</h4>
+            <p>
+                Without CodeIR, Claude spawned a subagent to orient itself. That subagent made 45 API calls and consumed 1.8 million tokens reading source files across the ORM layer, building the context needed to reason about the flush machinery. The main agent then read targeted sections of <code>unitofwork.py</code>, <code>session.py</code>, and <code>identity.py</code> to confirm the diagnosis. The orientation work was necessary but expensive.
+            </p>
+            <p>
+                With CodeIR, the orientation was already compiled. The agent ran <code>codeir bearings</code> to see the project structure, searched for flush-related entities, inspected <code>finalize_flush_changes</code> at the Behavior level to see its call graph without reading source, then expanded only the 20 lines of the method itself. It spotted the <code>states.difference(isdel)</code> gap, confirmed that other parts of the codebase correctly filter <code>listonly</code>, and proposed the fix.
+            </p>
+
+            <h4>Takeaway</h4>
+            <p>
+                Claude already knows it needs to understand a system before reasoning about it. Without CodeIR, it builds that understanding by reading source files, which is expensive and scales with repo size. CodeIR front-loads that work at index time so the agent starts with the architectural picture and drops to source only where it matters.
+            </p>
+
+            <!-- REMOVED: Terminal comparison windows for SQLAlchemy case study
+            <div class="terminal-comparison">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">Without CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>This sounds like a tricky bug in the unit of work / cascade / identity map interaction. Let me get oriented in this SQLAlchemy codebase and trace through the relevant areas.
+
+⏺ Search(pattern: "**/*.md")
+  ⎿  Found 4 files (ctrl+o to expand)
+
+⏺ Search(pattern: "lib/sqlalchemy/orm/**/*.py")
+  ⎿  Found 38 files (ctrl+o to expand)
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ Let me explore the key files for session flush, identity map, and cascade handling.
+
+⏺ Read(lib/sqlalchemy/orm/session.py)
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 799 lines
+
+⏺ Read(lib/sqlalchemy/orm/identity.py)
+  ⎿  Read 303 lines
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I found something interesting. Let me look at the finalize_flush_changes method more closely and the session's _register_persistent method.
+
+⏺ Search(pattern: "def _register_persistent", path: "lib/sqlalchemy/orm")
+  ⎿  Found 1 line (ctrl+o to expand)
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm")
+  ⎿  Found 13 lines (ctrl+o to expand)
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I see a potential issue in the finalize_flush_changes logic. Let me read the session's _register_persistent method and the surrounding context.
+
+⏺ Read(lib/sqlalchemy/orm/session.py)
+  ⎿  Read 100 lines
+
+                                                                                   10:42 AM claude-opus-4-5-20251101
+⏺ I found the bug. Let me look at the finalize_flush_changes method more carefully and then confirm how listonly states get registered.
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 30 lines
+
+⏺ Search(pattern: "register_object.*listonly.*True", path: "lib/sqlalchemy/orm")
+  ⎿  Found 0 lines
+
+⏺ Search(pattern: "listonly=True", path: "lib/sqlalchemy/orm")
+  ⎿  Found 0 lines
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/dependency.py")
+  ⎿  Found 23 lines (ctrl+o to expand)
+
+⏺ Search(pattern: ", True\)", path: "lib/sqlalchemy/orm/unitofwork.py")
+  ⎿  Found 23 lines (ctrl+o to expand)
+
+∴ Thinking…
+  Interesting! Line 243-245 shows remove_state_actions which sets listonly=True:
+  def remove_state_actions(self, state):
+      """Remove pending actions for a state from the uowtransaction."""
+      isdelete = self.states[state][0]
+      self.states[state] = (isdelete, True)
+  So states can have their actions removed during flush processing but still remain in
+  the states dict with listonly=True. These are objects initially considered for flush
+  but then determined to not need any actual database operations.
+
+  Now I understand the bug clearly:
+  1. Objects are registered via register_object() during cascade processing
+  2. Some have actions removed via remove_state_actions() → listonly=True
+  3. In finalize_flush_changes():
+     - isdel correctly filters for isdelete=True AND listonly=False
+     - But other = states.difference(isdel) includes ALL remaining states,
+       including those with listonly=True
+  4. These listonly=True states are passed to _register_persistent() which:
+     - Replaces them in the identity map
+     - Commits their state (marks them clean)
+     - Registers them as altered
+
+                                                                                   10:43 AM claude-opus-4-5-20251101
+⏺ I've found the bug. Here's what's happening:
+
+  Root Cause Analysis
+  In finalize_flush_changes() (unitofwork.py lines 470-489):
+
+  states = set(self.states)
+  isdel = {
+      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+  }
+  other = states.difference(isdel)  # &lt;-- BUG IS HERE
+
+  The listonly flag marks states pulled in during cascade processing that don't need
+  actual database operations. When computing other, it correctly filters listonly from
+  deleted states, but states.difference(isdel) includes ALL non-deleted states —
+  including those with listonly=True.
+
+  These listonly=True states then get passed to _register_persistent() which adds them
+  to the identity map and marks them as clean — even though they were never written.
+
+  The Fix:
+  other = {
+      s for (s, (isdelete, listonly)) in self.states.items()
+      if not isdelete and not listonly
+  }
+
+⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
+                    </div>
+                </div>
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-label">With CodeIR</span>
+                    </div>
+                    <div class="terminal-body">
+                        <pre><code>This sounds like a bug in the unit of work or identity map handling during cascade flushes. Let me orient in the SQLAlchemy codebase and trace the relevant code paths.
+
+⏺ I'll investigate this flush finalization bug. Let me start by understanding the codebase structure and then locate the flush-related logic.
+
+⏺ Read(.claude/bearings-summary.md)
+  ⎿  Read 19 lines
+
+⏺ Bash(codeirsearch "flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -40)
+
+⏺ Bash(codeirsearch "finalize flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
+  ⎿    FNLZFLSHCHNGS         UOWTransaction.finalize_flush_changes     lib/sqlalchemy/orm/unitofwork.py:470  [method]
+       ATFLSH.03             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1545  [method]
+       ATFLSH.04             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1554  [method]
+       FLSH.02               AsyncSession.flush                        lib/sqlalchemy/ext/asyncio/session.py:826  [async_method]
+       NTFLSH.02             AsyncSession.no_autoflush                 lib/sqlalchemy/ext/asyncio/session.py:1558  [method]
+       TSTFLSH               AsyncSessionTransactionTest.test_flush    test/ext/asyncio/test_session.py:613  [async_method]
+       ATFLSHTST             AutoFlushTest                             test/ext/test_associationproxy.py:94  [class]
+       FXTR.16               AutoFlushTest._fixture                    test/ext/test_associationproxy.py:120  [method]
+       ASSCTN                AutoFlushTest._fixture.Association        test/ext/test_associationproxy.py:128  [class]
+       INIT.685              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:131  [method]
+       INIT.686              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:136  [method]
+       CHLD.11               AutoFlushTest._fixture.Child              test/ext/test_associationproxy.py:124  [class]
+       INIT.684              AutoFlushTest._fixture.Child.__init__     test/ext/test_associationproxy.py:125  [method]
+       PRNT.16               AutoFlushTest._fixture.Parent             test/ext/test_associationproxy.py:121  [class]
+       TSTPRMTRFLSH          AutoFlushTest._test_premature_flush       test/ext/test_associationproxy.py:159  [method]
+       DFNTBLS.123           AutoFlushTest.define_tables               test/ext/test_associationproxy.py:96  [method]
+       TSTDCTST              AutoFlushTest.test_dict_set               test/ext/test_associationproxy.py:206  [method]
+       SET.44                AutoFlushTest.test_dict_set.set_          test/ext/test_associationproxy.py:207  [method]
+       TSTLSTPPND            AutoFlushTest.test_list_append            test/ext/test_associationproxy.py:186  [method]
+       TSTLSTXTND            AutoFlushTest.test_list_extend            test/ext/test_associationproxy.py:191  [method]
+       TSTSTDD               AutoFlushTest.test_set_add                test/ext/test_associationproxy.py:196  [method]
+       TSTSTXTND             AutoFlushTest.test_set_extend             test/ext/test_associationproxy.py:201  [method]
+       ATFLSHTST.02          AutoflushTest                             test/orm/test_deferred.py:2780  [class]
+       STPCLSSS.193          AutoflushTest.setup_classes               test/orm/test_deferred.py:2782  [method]
+       A.355                 AutoflushTest.setup_classes.A             test/orm/test_deferred.py:2785  [class]
+       B.196                 AutoflushTest.setup_classes.B             test/orm/test_deferred.py:2791  [class]
+       TSTDFRRDTFLSHS        AutoflushTest.test_deferred_autoflushes   test/orm/test_deferred.py:2800  [method]
+       TSTRFLSH              BiDirectionalManyToOneTest.test_reflush   test/orm/test_cycles.py:509  [method]
+       TSTRFLSH2             BiDirectionalManyToOneTest.test_reflush_2  test/orm/test_cycles.py:529  [method]
+       TSTTFLSH              BulkDMLReturningInhTest.test_autoflush    test/orm/dml/test_bulk_statements.py:1267  [method]
+
+
+⏺ Bash(codeirsearch "list_only" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -20)
+  ⎿  No entities found.
+
+
+⏺ Bash(codeirsearch "identity persistent" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
+  ⎿    TSTDNTTYFLG           SessionLifecycleEventsTest.test_loaded_as_persistent.test_identity_flag  test/orm/test_events.py:3432  [method]
+       IDNTTY                InstanceState.identity                    lib/sqlalchemy/orm/state.py:409  [method]
+       IDNTTY.02             Identity                                  lib/sqlalchemy/sql/schema.py:6381  [class]
+       INIT.529              Identity.__init__                         lib/sqlalchemy/sql/schema.py:6423  [method]
+       ASDCT.03              Identity._as_dict                         lib/sqlalchemy/sql/schema.py:6555  [method]
+       ASFRPDT.03            Identity._as_for_update                   lib/sqlalchemy/sql/schema.py:6539  [method]
+       COPY.33               Identity._copy                            lib/sqlalchemy/sql/schema.py:6550  [method]
+       STPRNT.19             Identity._set_parent                      lib/sqlalchemy/sql/schema.py:6517  [method]
+       COPY.32               Identity.copy                             lib/sqlalchemy/sql/schema.py:6547  [method]
+       ONNLL                 Identity.on_null                          lib/sqlalchemy/sql/schema.py:6509  [method]
+       IDNTTYTNCRMNTTST      IdentityAutoincrementTest                 lib/sqlalchemy/testing/suite/test_select.py:1771  [class]
+       DFNTBLS.32            IdentityAutoincrementTest.define_tables   lib/sqlalchemy/testing/suite/test_select.py:1776  [method]
+       TSTTNCRMNTWTHDNTTY    IdentityAutoincrementTest.test_autoincrement_with_identity  lib/sqlalchemy/testing/suite/test_select.py:1790  [method]
+       IDNTTYCHSR.05         IdentityChooser                           lib/sqlalchemy/ext/horizontal_shard.py:92  [class]
+       CALL.29               IdentityChooser.__call__                  lib/sqlalchemy/ext/horizontal_shard.py:93  [method]
+       IDNTTYCLMNTST.02      IdentityColumnTest                        test/engine/test_reflection.py:2343  [class]
+       IDNTTYCLMNTST         IdentityColumnTest                        lib/sqlalchemy/testing/suite/test_select.py:1691  [class]
+       DFNTBLS.115           IdentityColumnTest.define_tables          test/engine/test_reflection.py:2350  [method]
+       DFNTBLS.31            IdentityColumnTest.define_tables          lib/sqlalchemy/testing/suite/test_select.py:1698  [method]
+       INSRTDT.16            IdentityColumnTest.insert_data            lib/sqlalchemy/testing/suite/test_select.py:1725  [method]
+       TSTNSRTLWYSRRR        IdentityColumnTest.test_insert_always_error  lib/sqlalchemy/testing/suite/test_select.py:1761  [method]
+       FN                    IdentityColumnTest.test_insert_always_error.fn  lib/sqlalchemy/testing/suite/test_select.py:1762  [method]
+       TSTSLCTLL.02          IdentityColumnTest.test_select_all        lib/sqlalchemy/testing/suite/test_select.py:1739  [method]
+       TSTSLCTCLMNS.02       IdentityColumnTest.test_select_columns    lib/sqlalchemy/testing/suite/test_select.py:1754  [method]
+       TSTTBLRFLCTN.02       IdentityColumnTest.test_table_reflection  test/engine/test_reflection.py:2358  [method]
+       IDNTTYDDL             IdentityDDL                               test/sql/test_identity_column.py:156  [class]
+       IDNTTYDFLTSNPDTTST    IdentityDefaultsOnUpdateTest              test/orm/test_defaults.py:418  [class]
+       DFNTBLS.301           IdentityDefaultsOnUpdateTest.define_tables  test/orm/test_defaults.py:427  [method]
+       STPCLSSS.188          IdentityDefaultsOnUpdateTest.setup_classes  test/orm/test_defaults.py:436  [method]
+       THNG.20               IdentityDefaultsOnUpdateTest.setup_classes.Thing  test/orm/test_defaults.py:437  [class]
+
+
+                                                                                                                                    10:33 AM claude-opus-4-5-20251101
+⏺ Found finalize_flush_changes at unitofwork.py:470. Let me examine this method and search for state transition logic.
+
+⏺ Bash(codeirshow FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main --level Behavior 2>/dev/null)
+  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
+     File:   lib/sqlalchemy/orm/unitofwork.py:470
+     Level:  Behavior
+
+     MT FNLZFLSHCHNGS C=_register_persistent,_remove_newly_deleted,difference,items,set F=IR A=3 #DB #CORE
+
+
+⏺ Bash(codeirexpand FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null)
+  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
+     File:   lib/sqlalchemy/orm/unitofwork.py:470-489
+
+         def finalize_flush_changes(self) -> None:
+             """Mark processed objects as clean / deleted after a successful
+             flush().
+             This method is called within the flush() method after the
+             execute() method has succeeded and the transaction has been committed.
+             """
+             if not self.states:
+                 return
+             states = set(self.states)
+             isdel = {
+                 s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+             }
+             other = states.difference(isdel)
+             if isdel:
+                 self.session._remove_newly_deleted(isdel)
+             if other:
+                 self.session._register_persistent(other)
+
+
+                                                                                                                                    10:33 AM claude-opus-4-5-20251101
+⏺ Found the bug. Look at lines 481-488:
+
+  isdel = {
+      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
+  }
+  other = states.difference(isdel)
+
+  The issue: other is calculated as "everything NOT in isdel", but isdel only contains delete operations. List-only states where listonly=True but isdelete=False still end
+  up in other and incorrectly get passed to _register_persistent().
+
+  Let me verify by checking how states are registered and confirm the fix:
+
+⏺ Bash(codeirsearch "register_object" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -15)
+  ⎿    RGSTRBJCT             UOWTransaction.register_object            lib/sqlalchemy/orm/unitofwork.py:308  [method]
+       RGSTRBJCT.02          MetaData._register_object                 lib/sqlalchemy/sql/schema.py:6271  [method]
+
+
+⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/unitofwork.py")
+  ⎿  Found 11 lines (ctrl+o to expand)
+
+                                                                                                                                    10:34 AM claude-opus-4-5-20251101
+⏺ Confirmed. The pattern is used correctly elsewhere (lines 526-527, 612-613):
+
+  if not listonly:
+
+  But finalize_flush_changes misses this check. Let me show you the exact bug and fix:
+
+⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
+  ⎿  Read 30 lines
+
+                                                                                                                                    10:34 AM claude-opus-4-5-20251101
+⏺ The Bug (line 485):
+
+  other = states.difference(isdel)
+
+  This calculates other as "all states except deletes", but list-only states where isdelete=False are NOT excluded. They end up in other and get passed to
+  _register_persistent(), incorrectly moving them to persistent state.
+
+  The Fix:
+
+  other = {
+      s for (s, (isdelete, listonly)) in self.states.items()
+      if not isdelete and not listonly
+  }
+
+  Here's the corrected method:
+
+⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
+                    </div>
+                </div>
+            </div>
+            END REMOVED -->
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 3: CodeIR in Practice______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>What CodeIR Looks Like in Practice</h2>
+            <p>
+              CodeIR is a tool that builds an architectural map of a repository.
+</p>
+<p>
+              You index a repo once, and your coding agent can see the structure of the entire 
+              system: entities, relationships, and behavioral signatures before reading a 
+              single source file.
+            </p>
+            <p>
+              Instead of navigating through files, the model navigates through architecture.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Setup & Workflow</div>
+
+            <h4>Setup</h4>
+<pre><code>pip install codeir
+codeir index ./your-repo</code></pre>
+
+            <p>
+                This creates a <code>.codeir/</code> directory containing the index.
+                CodeIR also generates files your agent reads automatically:
+            </p>
+            <ul>
+                <li><code>.claude/rules/codeir.md</code> - tool usage instructions (tells the agent how to use the CodeIR commands)</li>
+                <li><code>.claude/bearings.md</code> - the full architectural map of your codebase</li>
+                <li><code>.claude/bearings/{category}.md</code> - per-category detail for large codebases</li>
+            </ul>
+
+            <p>The workflow changes from "read files and hope" to a structured discovery process:</p>
+
+            <div class="workflow">
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">01</span>
+                        <span class="workflow-label">Orient</span>
+                    </div>
+                    <p>The agent reads bearings.md at session start. In 200–400 tokens, it knows every module in the codebase, what each one does, how they depend on each other. It knows where to look before it looks anywhere. For large codebases, per-category bearings files let the agent drill into only the relevant slice.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">02</span>
+                        <span class="workflow-label">Search</span>
+                    </div>
+                    <p>Instead of grepping through files, the agent searches the semantic index. Multi-term queries with OR logic and ranking: <code>codeir search "auth token validate"</code> returns the specific entities relevant to the task, not files that happen to contain those words. Use <code>--category</code> to filter (e.g., <code>--category core_logic</code> to skip tests).</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">03</span>
+                        <span class="workflow-label">Grep</span>
+                    </div>
+                    <p>When search doesn't find what you need, <code>codeir grep</code> does regex search across source files, grouped by entity. Use <code>--path</code> to scope to a directory and <code>-v</code> for full IR context per match. This bridges the gap between entity-oriented search and line-oriented grep.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">04</span>
+                        <span class="workflow-label">Inspect</span>
+                    </div>
+                    <p>The agent retrieves entity-level IR at the detail level it needs. Index level for quick orientation ("what kind of thing is this?"), Behavior level for understanding ("what does this actually do and what does it call?").</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">05</span>
+                        <span class="workflow-label">Trace</span>
+                    </div>
+                    <p><code>codeir callers</code> finds everything that references a given entity: import-level, local, and fuzzy matching (results marked <code>~</code> are probable but not certain). <code>codeir impact</code> does reverse dependency analysis via BFS — showing affected entities grouped by distance with the full dependency chain.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">06</span>
+                        <span class="workflow-label">Scope</span>
+                    </div>
+                    <p><code>codeir scope</code> returns the minimal context needed to safely modify an entity: its callers, callees, and sibling methods (same class). Use before editing to understand what you might break and what the entity depends on.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step workflow-step--last">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">07</span>
+                        <span class="workflow-label">Expand</span>
+                    </div>
+                    <p>Only when the agent needs to verify exact implementation details or make a change does it expand to raw source. This is the last step, not the first.</p>
+                </div>
+            </div>
+
+            <p>
+                <em>The net effect: Claude Code stops reading files it doesn't need. It spends
+                its context window on understanding the system instead of re-reading syntax.</em>
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: CLI Reference & IR Format</div>
+
+            <h4>Available CLI Commands</h4>
+<pre><code>codeir index &lt;path&gt;                              # Index or re-index a repository
+codeir search &lt;query&gt; [--category &lt;cat&gt;]         # Multi-term OR search with ranking
+codeir grep &lt;pattern&gt; [--path &lt;dir&gt;] [-i] [-C N] [-v]  # Regex search, grouped by entity
+codeir show &lt;entity_id&gt; [--level Index|Behavior] # Show entity IR at specified level
+codeir expand &lt;entity_id&gt;                        # Expand to full source
+codeir callers &lt;entity_id&gt;                       # Three-tier caller resolution
+codeir impact &lt;entity_id&gt; [--depth N]            # Reverse dependency analysis (BFS)
+codeir scope &lt;entity_id&gt;                         # Minimal context for safe modification
+codeir bearings                                  # Summary + menu with token estimates
+codeir bearings [category]                       # Specific category (e.g., core_logic)
+codeir bearings --full                           # Full module map</code></pre>
+
+            <p>
+                CodeIR is globally installed via symlink at <code>/usr/local/bin/codeir</code>.
+                The <code>.claude/rules/</code> directory is read automatically by Claude Code,
+                so the integration requires zero manual configuration after indexing.
+            </p>
+
+            <hr>
+
+            <h4>What bearings.md Looks Like</h4>
+            <p>
+                Each line describes one module: its ID, filename, category, entity count,
+                dependencies, and churn. Grouped by category, ordered by entity count.
+            </p>
+<pre><code>MD INVC invoice.py | cat:core_logic | entities:221 | deps:- | churn:-
+MD SESS sessions.py | cat:core_logic | entities:18  | deps:auth,hooks,utils | churn:-
+MD AUTH auth.py     | cat:core_logic | entities:12  | deps:sessions,models | churn:-
+MD HOOK hooks.py    | cat:extension  | entities:7   | deps:sessions | churn:-
+...</code></pre>
+
+            <p>
+                The entire architectural map of a codebase like Flask (83 files, 1,629 entities)
+                fits in a few hundred tokens. Django (2,894 files, 41,819 entities) fits in a
+                few thousand. This is the orientation layer - the agent reads it once and
+                immediately knows the shape of the system.
+            </p>
+            <p>
+                For large codebases like Tryton, per-category bearings files break the map
+                into manageable pieces. The agent loads <code>.claude/bearings/core_logic.md</code>
+                when working on business logic, <code>.claude/bearings/tests.md</code> when
+                writing tests - never the whole thing at once if it doesn't need to.
+            </p>
+
+            <hr>
+
+            <h4>Entity IR at Each Level</h4>
+
+            <h5>Index - orientation (selection-level)</h5>
+<pre><code>FN RDTKN #HTTP #CORE</code></pre>
+
+            <h5>Behavior - what it does and calls (reasoning-level)</h5>
+<pre><code>MT WBHK.02 C=webhook_charge_captured,webhook_charge_dispute_closed,webhook_charge_dispute_created,webhook_charge_expired,webhook_charge_failed,webhook_charge_pending F=IR A=2 #CORE</code></pre>
+
+            <p>
+                Behavior fields: <code>C=</code> calls made, <code>F=</code> flags
+                (R=returns, E=raises, I=conditionals, L=loops, T=try/except, W=with),
+                <code>A=</code> assignment count, <code>B=</code> base class.
+            </p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Flag/Field</th>
+                        <th>Meaning</th>
+                        <th>Why the LLM cares</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>C=</code> (Calls)</td>
+                        <td>Outgoing dependencies</td>
+                        <td>Traces the "blast radius." If MT.A calls MT.B, the model knows a change in B might require an update in A.</td>
+                    </tr>
+                    <tr>
+                        <td><code>F=IR</code> (Flags)</td>
+                        <td>Internal Logic (e.g., If, Return)</td>
+                        <td>Indicates complexity. F=R is a simple pipe; F=ITLW (If, Try, Loop, With) is a high-logic function that needs careful handling.</td>
+                    </tr>
+                    <tr>
+                        <td><code>A=2</code> (Assignments)</td>
+                        <td>State changes</td>
+                        <td>Tells the model if the function is "pure" or if it's juggling internal state. High assignment counts signal a "heavy lifter" function.</td>
+                    </tr>
+                    <tr>
+                        <td><code>B=</code> (Bases)</td>
+                        <td>Class inheritance</td>
+                        <td>Immediately establishes the "Rules of the Road" (e.g., knowing a class inherits from Model or Singleton without reading the imports).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5>Source expansion (verification-level)</h5>
+<pre><code>[FN RDTKN @auth/tokens.py:47]
+async def read_token(token: str, session: Session) -> TokenData:
+    response = session.get(f"/tokens/{token}")
+    ...</code></pre>
+
+            <p>
+                The agent navigates this hierarchy the same way a developer navigates a system:
+                broad orientation first, then targeted deep dives only where needed.
+            </p>
+
+            <hr>
+
+            <h4>Example Workflow (Tryton codebase)</h4>
+<pre><code>1. codeir search "flush"               → no relevant results
+2. codeir grep "def flush" --path orm/ → finds entity FLSH.04 in orm/session.py
+3. codeir show FLSH.04                → see Behavior IR: what it calls, flags, assignments
+4. codeir callers FLSH.04             → see what depends on it
+5. codeir impact FLSH.04 --depth 2    → understand blast radius before changing
+6. codeir scope FLSH.04               → get callers, callees, siblings for safe modification
+7. codeir expand FLSH.04              → read source only for the entity you need to modify</code></pre>
+
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 4: How It Works______________________________-->
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>How It Works Under the Hood</h2>
+            <p>
+              Instead of reading files and hoping to find the right ones, 
+              CodeIR gives the agent the whole system in view, with the 
+              ability to drill into any detail on demand.
+            </p>
+            <p>
+              CodeIR compiles a codebase into a hierarchical
+              representation with three levels: Index, Behavior and Source.
+            </p>
+            <p>
+This allows models to orient themselves across thousands of entities before expanding only the specific code they need.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: The Three Layers</div>
+
+            <div class="ir-cards">
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 1</span>
+                        <span class="ir-card-name">Index</span>
+                        <span class="ir-card-tag">Architectural Map</span>
+                    </div>
+                    <p>Every entity in the codebase gets a one-line representation: entity type, stable ID, domain tag, category tag. An agent can scan thousands of entities in a few hundred tokens and identify which ones are relevant to a task.</p>
+                    <p class="ir-card-question">Answers: <em>what is this codebase made of?</em></p>
+                </div>
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 2</span>
+                        <span class="ir-card-name">Behavior</span>
+                        <span class="ir-card-tag">Reasoning Layer</span>
+                    </div>
+                    <p>Selected entities get expanded to Behavior: type, ID, calls made, flags (returns, raises, conditionals, loops, try/except, with-blocks), assignment count, and base class. The agent can understand what an entity does and what it depends on — without reading source.</p>
+                    <p class="ir-card-question">Answers: <em>what does this entity actually do?</em></p>
+                </div>
+                <div class="ir-card">
+                    <div class="ir-card-header">
+                        <span class="ir-card-level">Level 3</span>
+                        <span class="ir-card-name">Source</span>
+                        <span class="ir-card-tag">Verification Layer</span>
+                    </div>
+                    <p>When the agent needs to verify exact implementation or make a modification, it expands to full source with entity boundary markers.</p>
+                    <p class="ir-card-question">Answers: <em>exactly how is this implemented?</em></p>
+                </div>
+            </div>
+
+            <p>
+                The compilation process is one-time per repository: AST parsing extracts every
+                entity (functions, classes, methods, constants), a classifier assigns each module
+                to a category, and a multi-pass indexer generates all IR levels with stable,
+                deterministic entity IDs. Re-indexing is incremental — only changed files get
+                reprocessed.
+            </p>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Compilation Pipeline</div>
+
+            <h4>The Compilation Pipeline in Detail</h4>
+
+            <h5>Step 1: AST Extraction</h5>
+            <p>
+                CodeIR walks every Python file with an AST visitor, extracting functions,
+                async functions, classes, methods, and module-level constants. Each entity
+                gets boundary markers (start line, end line) and import analysis (what this
+                entity imports and from where).
+            </p>
+
+            <h5>Step 2: Module Classification</h5>
+            <p>
+                Each file is classified into categories: <code>core_logic</code>, <code>data_model</code>,
+                <code>api_endpoint</code>, <code>auth</code>, <code>config</code>, <code>utility</code>,
+                <code>extension</code>, <code>test</code>, <code>migration</code>, <code>cli</code>,
+                <code>docs</code>, <code>constants</code>, <code>exceptions</code>, <code>init</code>,
+                <code>router</code>. Classification uses structural signals — import patterns,
+                decorator presence, naming conventions — not LLM inference.
+            </p>
+
+            <h5>Step 3: Stable ID Generation</h5>
+            <p>
+                Every entity gets a deterministic ID that remains stable across re-indexing
+                as long as the entity's name and location don't change. Format:
+                <code>TYPE STEM.SUFFIX</code> (e.g., <code>FN RDTKN.03</code>, <code>MT WBHK.02</code>).
+                The ID scheme uses vowel-stripped abbreviations with numeric suffixes for
+                disambiguation.
+            </p>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Type</th><th>Meaning</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>FN</code></td><td>Function</td></tr>
+                    <tr><td><code>CLS</code></td><td>Class</td></tr>
+                    <tr><td><code>MT</code></td><td>Method</td></tr>
+                    <tr><td><code>AMT</code></td><td>Async method</td></tr>
+                </tbody>
+            </table>
+            <p>
+                Stable IDs act as pointers for the LLM's memory, allowing it to maintain
+                a constant "mental map" even as the underlying code changes.
+            </p>
+
+            <h5>Step 4: Multi-level IR Generation</h5>
+            <p>Each entity is compressed at all levels simultaneously:</p>
+            <ul>
+                <li><strong>Index</strong> strips everything except type, ID, and domain/category tags</li>
+                <li><strong>Behavior</strong> adds: calls made (<code>C=</code>), flags (<code>F=</code> with single-letter codes: R returns, E raises, I conditionals, L loops, T try/except, W with-blocks), assignment count (<code>A=</code>), base class (<code>B=</code>)</li>
+                <li><strong>Source</strong> wraps the original code with entity metadata headers (<code>[TYPE ID @filepath:line]</code>)</li>
+            </ul>
+            <p>
+                Empty fields are omitted at Behavior level (no <code>C=-</code>, <code>F=-</code>,
+                <code>A=0</code>). Trivial entities below a token threshold skip compression
+                and store as source at all levels.
+            </p>
+
+            <h5>Step 5: Bearings Generation</h5>
+            <p>
+                Once classification and entity counting are complete, the index generates the
+                module-level map. This contains no entity-level IR — it's a directory of modules
+                grouped by category with dependency and churn information. For large codebases,
+                per-category bearings files are generated in
+                <code>.claude/bearings/{category}.md</code>.
+            </p>
+
+            <h5>Storage</h5>
+            <p>
+                SQLite with WAL mode, two-database design (entities + mappings). Created
+                automatically in <code>.codeir/</code> on first indexing. Incremental
+                re-indexing uses change detection — only modified files trigger reprocessing.
+            </p>
+
+            <hr>
+
+            <h4>A Note on What Was Evaluated and Removed</h4>
+            <p>
+                An intermediate level between Index and Behavior (type signatures only) was
+                tested and cut. It was too compressed to be safe — agents would confidently
+                reason from type information without seeing behavioral flags like exception
+                handling, leading to plans that missed critical error conditions. The
+                three-level stack is cleaner and each level has a clear, non-overlapping purpose.
+            </p>
+        </div>
+    </section>
+
+    <!-- ____________________________________Section 5: Benchmarks______________________________
+    <section class="layered-content">
+        <div class="l1-container">
+            <h2>Benchmark: Navigation Accuracy</h2>
+            <p>
+                CodeIR's oriented retrieval consistently outperforms embedding-based retrieval
+                across models.
+            </p>
+
+            <div class="action-bar">
+                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <span class="plus-icon">+</span> Explanation (L2)
+                </button>
+                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <span class="plus-icon">+</span> Deep Dive (L3)
+                </button>
+            </div>
+        </div>
+
+        <div class="l2-container hidden-layer">
+            <div class="depth-tag-L2">Level 2: Results</div>
+
+            <p>
+                Tested on fastapi-users (88 files, 24 benchmark tasks covering structural
+                reasoning, entity identification, and cross-module tracing):
+            </p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Haiku Top-3</th>
+                        <th>Sonnet Top-3</th>
+                        <th>Opus Top-3</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MPNet embedding retrieval</td>
+                        <td>70.8%</td>
+                        <td>58.3%</td>
+                        <td>33.3%</td>
+                    </tr>
+                    <tr>
+                        <td>BM25 lexical retrieval</td>
+                        <td>50.0%</td>
+                        <td>45.8%</td>
+                        <td>16.7%</td>
+                    </tr>
+                    <tr>
+                        <td>Raw source baseline</td>
+                        <td>50.0%</td>
+                        <td>45.8%</td>
+                        <td>25.0%</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR (flow v2)</td>
+                        <td>79.2%</td>
+                        <td>83.3%</td>
+                        <td>83.3%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                The striking pattern: baselines degrade as models get stronger. CodeIR holds
+                steady or improves. The delta grows from +8 points on Haiku to +50 points on Opus.
+            </p>
+            <p>
+                This isn't a paradox. Stronger models are better at recognizing when context
+                is insufficient — Opus sees five code fragments from embedding retrieval and
+                correctly identifies that it can't reason about the full picture. It hedges
+                instead of guessing. Give it the architectural map, and it goes from 33% to 83%.
+            </p>
+
+            <blockquote>
+                The implication: as models improve at knowing what they don't know,
+                fragment-based retrieval becomes less effective, not more. Structured context
+                becomes a requirement, not an optimization.
+            </blockquote>
+
+            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                <span class="plus-icon">+</span> Deep Dive (L3)
+            </button>
+        </div>
+
+        <div class="l3-container hidden-layer">
+            <div class="depth-tag-L3">Level 3: Token Economics & Comparisons</div>
+
+            <h4>Token Economics</h4>
+            <p>Token costs tell the same story:</p>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Condition</th>
+                        <th>Haiku Warm</th>
+                        <th>Sonnet Warm</th>
+                        <th>Opus Warm</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Raw source baseline</td>
+                        <td>6,727</td>
+                        <td>7,339</td>
+                        <td>16,846</td>
+                    </tr>
+                    <tr>
+                        <td>BM25 lexical</td>
+                        <td>6,973</td>
+                        <td>7,650</td>
+                        <td>26,220</td>
+                    </tr>
+                    <tr>
+                        <td>MPNet embedding</td>
+                        <td>2,296</td>
+                        <td>3,114</td>
+                        <td>6,575</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR (flow v2)</td>
+                        <td>817</td>
+                        <td>669</td>
+                        <td>798</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                CodeIR's per-task token cost is stable across models (~670–820 tokens) while
+                baseline costs scale with model capability. Opus baselines are especially
+                expensive because the model generates more reasoning tokens when uncertain.
+            </p>
+
+            <h4>Important Caveat</h4>
+            <p>
+                The "warm" token count assumes orientation cost (reading bearings.md + Index)
+                is amortized across a session. In practice, prompt caching makes this nearly
+                free after the first task — the bearings prefix is static between tasks on a
+                stable codebase. Cold tokens (including orientation) run higher, but only the
+                first task in a session pays the full cost.
+            </p>
+
+            <h4>Caching Economics</h4>
+            <p>
+                With prompt caching, warm-mode CodeIR is cheaper per task than the MPNet
+                embedding baseline. The Index/bearings prefix currently falls below the minimum
+                caching threshold for some models — padding it with richer context (more detailed
+                module descriptions, common task patterns) would simultaneously unlock caching
+                and potentially improve accuracy.
+            </p>
+
+            <h4>Multi-Model Comparison: CodeIR vs Aider Repo Map</h4>
+            <p>
+                On the same 24-task benchmark, CodeIR's filtered Index scored 91.7% top-3
+                accuracy vs Aider's repo map at ~50%. A structural note: CodeIR's entity IDs
+                are the same vocabulary as the ground truth (the model returns IDs it was
+                given), while Aider requires a mapping layer from natural-language entity
+                references to ground truth IDs. This is a genuine design advantage, not an
+                unfair comparison — but it's worth noting that some of Aider's misses come
+                from mapping failures rather than retrieval failures.
+            </p>
+            <p class="todo-note">[TODO: Per-task breakdown showing which task types each approach wins/loses on — structural tasks vs. keyword-matchable tasks]</p>
+        </div>
+    </section> -->
+
       <!-- ____________________________________Section 2______________________________-->
       <section class="layered-content">
         <div class="l1-container">
@@ -1161,998 +2131,6 @@ Now I can propose a comprehensive plan.
       </div>
     </section>
 
-    <!-- ____________________________________Section 3: CodeIR in Practice______________________________-->
-    <section class="layered-content">
-        <div class="l1-container">
-            <h2>What CodeIR Looks Like in Practice</h2>
-            <p>
-              CodeIR is a tool that builds an architectural map of a repository.
-</p>
-<p>
-              You index a repo once, and your coding agent can see the structure of the entire 
-              system: entities, relationships, and behavioral signatures before reading a 
-              single source file.
-            </p>
-            <p>
-              Instead of navigating through files, the model navigates through architecture.
-            </p>
-
-            <div class="action-bar">
-                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
-                </button>
-                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
-                </button>
-            </div>
-        </div>
-
-        <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Setup & Workflow</div>
-
-            <h4>Setup</h4>
-<pre><code>pip install codeir
-codeir index ./your-repo</code></pre>
-
-            <p>
-                This creates a <code>.codeir/</code> directory containing the index.
-                CodeIR also generates files your agent reads automatically:
-            </p>
-            <ul>
-                <li><code>.claude/rules/codeir.md</code> - tool usage instructions (tells the agent how to use the CodeIR commands)</li>
-                <li><code>.claude/bearings.md</code> - the full architectural map of your codebase</li>
-                <li><code>.claude/bearings/{category}.md</code> - per-category detail for large codebases</li>
-            </ul>
-
-            <p>The workflow changes from "read files and hope" to a structured discovery process:</p>
-
-            <div class="workflow">
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">01</span>
-                        <span class="workflow-label">Orient</span>
-                    </div>
-                    <p>The agent reads bearings.md at session start. In 200–400 tokens, it knows every module in the codebase, what each one does, how they depend on each other. It knows where to look before it looks anywhere. For large codebases, per-category bearings files let the agent drill into only the relevant slice.</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">02</span>
-                        <span class="workflow-label">Search</span>
-                    </div>
-                    <p>Instead of grepping through files, the agent searches the semantic index. Multi-term queries with OR logic and ranking: <code>codeir search "auth token validate"</code> returns the specific entities relevant to the task, not files that happen to contain those words. Use <code>--category</code> to filter (e.g., <code>--category core_logic</code> to skip tests).</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">03</span>
-                        <span class="workflow-label">Grep</span>
-                    </div>
-                    <p>When search doesn't find what you need, <code>codeir grep</code> does regex search across source files, grouped by entity. Use <code>--path</code> to scope to a directory and <code>-v</code> for full IR context per match. This bridges the gap between entity-oriented search and line-oriented grep.</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">04</span>
-                        <span class="workflow-label">Inspect</span>
-                    </div>
-                    <p>The agent retrieves entity-level IR at the detail level it needs. Index level for quick orientation ("what kind of thing is this?"), Behavior level for understanding ("what does this actually do and what does it call?").</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">05</span>
-                        <span class="workflow-label">Trace</span>
-                    </div>
-                    <p><code>codeir callers</code> finds everything that references a given entity: import-level, local, and fuzzy matching (results marked <code>~</code> are probable but not certain). <code>codeir impact</code> does reverse dependency analysis via BFS — showing affected entities grouped by distance with the full dependency chain.</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">06</span>
-                        <span class="workflow-label">Scope</span>
-                    </div>
-                    <p><code>codeir scope</code> returns the minimal context needed to safely modify an entity: its callers, callees, and sibling methods (same class). Use before editing to understand what you might break and what the entity depends on.</p>
-                </div>
-                <div class="workflow-arrow">↓</div>
-                <div class="workflow-step workflow-step--last">
-                    <div class="workflow-step-header">
-                        <span class="workflow-num">07</span>
-                        <span class="workflow-label">Expand</span>
-                    </div>
-                    <p>Only when the agent needs to verify exact implementation details or make a change does it expand to raw source. This is the last step, not the first.</p>
-                </div>
-            </div>
-
-            <p>
-                <em>The net effect: Claude Code stops reading files it doesn't need. It spends
-                its context window on understanding the system instead of re-reading syntax.</em>
-            </p>
-
-            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
-            </button>
-        </div>
-
-        <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: CLI Reference & IR Format</div>
-
-            <h4>Available CLI Commands</h4>
-<pre><code>codeir index &lt;path&gt;                              # Index or re-index a repository
-codeir search &lt;query&gt; [--category &lt;cat&gt;]         # Multi-term OR search with ranking
-codeir grep &lt;pattern&gt; [--path &lt;dir&gt;] [-i] [-C N] [-v]  # Regex search, grouped by entity
-codeir show &lt;entity_id&gt; [--level Index|Behavior] # Show entity IR at specified level
-codeir expand &lt;entity_id&gt;                        # Expand to full source
-codeir callers &lt;entity_id&gt;                       # Three-tier caller resolution
-codeir impact &lt;entity_id&gt; [--depth N]            # Reverse dependency analysis (BFS)
-codeir scope &lt;entity_id&gt;                         # Minimal context for safe modification
-codeir bearings                                  # Summary + menu with token estimates
-codeir bearings [category]                       # Specific category (e.g., core_logic)
-codeir bearings --full                           # Full module map</code></pre>
-
-            <p>
-                CodeIR is globally installed via symlink at <code>/usr/local/bin/codeir</code>.
-                The <code>.claude/rules/</code> directory is read automatically by Claude Code,
-                so the integration requires zero manual configuration after indexing.
-            </p>
-
-            <hr>
-
-            <h4>What bearings.md Looks Like</h4>
-            <p>
-                Each line describes one module: its ID, filename, category, entity count,
-                dependencies, and churn. Grouped by category, ordered by entity count.
-            </p>
-<pre><code>MD INVC invoice.py | cat:core_logic | entities:221 | deps:- | churn:-
-MD SESS sessions.py | cat:core_logic | entities:18  | deps:auth,hooks,utils | churn:-
-MD AUTH auth.py     | cat:core_logic | entities:12  | deps:sessions,models | churn:-
-MD HOOK hooks.py    | cat:extension  | entities:7   | deps:sessions | churn:-
-...</code></pre>
-
-            <p>
-                The entire architectural map of a codebase like Flask (83 files, 1,629 entities)
-                fits in a few hundred tokens. Django (2,894 files, 41,819 entities) fits in a
-                few thousand. This is the orientation layer - the agent reads it once and
-                immediately knows the shape of the system.
-            </p>
-            <p>
-                For large codebases like Tryton, per-category bearings files break the map
-                into manageable pieces. The agent loads <code>.claude/bearings/core_logic.md</code>
-                when working on business logic, <code>.claude/bearings/tests.md</code> when
-                writing tests - never the whole thing at once if it doesn't need to.
-            </p>
-
-            <hr>
-
-            <h4>Entity IR at Each Level</h4>
-
-            <h5>Index - orientation (selection-level)</h5>
-<pre><code>FN RDTKN #HTTP #CORE</code></pre>
-
-            <h5>Behavior - what it does and calls (reasoning-level)</h5>
-<pre><code>MT WBHK.02 C=webhook_charge_captured,webhook_charge_dispute_closed,webhook_charge_dispute_created,webhook_charge_expired,webhook_charge_failed,webhook_charge_pending F=IR A=2 #CORE</code></pre>
-
-            <p>
-                Behavior fields: <code>C=</code> calls made, <code>F=</code> flags
-                (R=returns, E=raises, I=conditionals, L=loops, T=try/except, W=with),
-                <code>A=</code> assignment count, <code>B=</code> base class.
-            </p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Flag/Field</th>
-                        <th>Meaning</th>
-                        <th>Why the LLM cares</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>C=</code> (Calls)</td>
-                        <td>Outgoing dependencies</td>
-                        <td>Traces the "blast radius." If MT.A calls MT.B, the model knows a change in B might require an update in A.</td>
-                    </tr>
-                    <tr>
-                        <td><code>F=IR</code> (Flags)</td>
-                        <td>Internal Logic (e.g., If, Return)</td>
-                        <td>Indicates complexity. F=R is a simple pipe; F=ITLW (If, Try, Loop, With) is a high-logic function that needs careful handling.</td>
-                    </tr>
-                    <tr>
-                        <td><code>A=2</code> (Assignments)</td>
-                        <td>State changes</td>
-                        <td>Tells the model if the function is "pure" or if it's juggling internal state. High assignment counts signal a "heavy lifter" function.</td>
-                    </tr>
-                    <tr>
-                        <td><code>B=</code> (Bases)</td>
-                        <td>Class inheritance</td>
-                        <td>Immediately establishes the "Rules of the Road" (e.g., knowing a class inherits from Model or Singleton without reading the imports).</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5>Source expansion (verification-level)</h5>
-<pre><code>[FN RDTKN @auth/tokens.py:47]
-async def read_token(token: str, session: Session) -> TokenData:
-    response = session.get(f"/tokens/{token}")
-    ...</code></pre>
-
-            <p>
-                The agent navigates this hierarchy the same way a developer navigates a system:
-                broad orientation first, then targeted deep dives only where needed.
-            </p>
-
-            <hr>
-
-            <h4>Example Workflow (Tryton codebase)</h4>
-<pre><code>1. codeir search "flush"               → no relevant results
-2. codeir grep "def flush" --path orm/ → finds entity FLSH.04 in orm/session.py
-3. codeir show FLSH.04                → see Behavior IR: what it calls, flags, assignments
-4. codeir callers FLSH.04             → see what depends on it
-5. codeir impact FLSH.04 --depth 2    → understand blast radius before changing
-6. codeir scope FLSH.04               → get callers, callees, siblings for safe modification
-7. codeir expand FLSH.04              → read source only for the entity you need to modify</code></pre>
-
-        </div>
-    </section>
-
-    <!-- ____________________________________Section 4: How It Works______________________________-->
-    <section class="layered-content">
-        <div class="l1-container">
-            <h2>How It Works Under the Hood</h2>
-            <p>
-              Instead of reading files and hoping to find the right ones, 
-              CodeIR gives the agent the whole system in view, with the 
-              ability to drill into any detail on demand.
-            </p>
-            <p>
-              CodeIR compiles a codebase into a hierarchical
-              representation with three levels: Index, Behavior and Source.
-            </p>
-            <p>
-This allows models to orient themselves across thousands of entities before expanding only the specific code they need.
-            </p>
-
-            <div class="action-bar">
-                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
-                </button>
-                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
-                </button>
-            </div>
-        </div>
-
-        <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: The Three Layers</div>
-
-            <div class="ir-cards">
-                <div class="ir-card">
-                    <div class="ir-card-header">
-                        <span class="ir-card-level">Level 1</span>
-                        <span class="ir-card-name">Index</span>
-                        <span class="ir-card-tag">Architectural Map</span>
-                    </div>
-                    <p>Every entity in the codebase gets a one-line representation: entity type, stable ID, domain tag, category tag. An agent can scan thousands of entities in a few hundred tokens and identify which ones are relevant to a task.</p>
-                    <p class="ir-card-question">Answers: <em>what is this codebase made of?</em></p>
-                </div>
-                <div class="ir-card">
-                    <div class="ir-card-header">
-                        <span class="ir-card-level">Level 2</span>
-                        <span class="ir-card-name">Behavior</span>
-                        <span class="ir-card-tag">Reasoning Layer</span>
-                    </div>
-                    <p>Selected entities get expanded to Behavior: type, ID, calls made, flags (returns, raises, conditionals, loops, try/except, with-blocks), assignment count, and base class. The agent can understand what an entity does and what it depends on — without reading source.</p>
-                    <p class="ir-card-question">Answers: <em>what does this entity actually do?</em></p>
-                </div>
-                <div class="ir-card">
-                    <div class="ir-card-header">
-                        <span class="ir-card-level">Level 3</span>
-                        <span class="ir-card-name">Source</span>
-                        <span class="ir-card-tag">Verification Layer</span>
-                    </div>
-                    <p>When the agent needs to verify exact implementation or make a modification, it expands to full source with entity boundary markers.</p>
-                    <p class="ir-card-question">Answers: <em>exactly how is this implemented?</em></p>
-                </div>
-            </div>
-
-            <p>
-                The compilation process is one-time per repository: AST parsing extracts every
-                entity (functions, classes, methods, constants), a classifier assigns each module
-                to a category, and a multi-pass indexer generates all IR levels with stable,
-                deterministic entity IDs. Re-indexing is incremental — only changed files get
-                reprocessed.
-            </p>
-
-            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
-            </button>
-        </div>
-
-        <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Compilation Pipeline</div>
-
-            <h4>The Compilation Pipeline in Detail</h4>
-
-            <h5>Step 1: AST Extraction</h5>
-            <p>
-                CodeIR walks every Python file with an AST visitor, extracting functions,
-                async functions, classes, methods, and module-level constants. Each entity
-                gets boundary markers (start line, end line) and import analysis (what this
-                entity imports and from where).
-            </p>
-
-            <h5>Step 2: Module Classification</h5>
-            <p>
-                Each file is classified into categories: <code>core_logic</code>, <code>data_model</code>,
-                <code>api_endpoint</code>, <code>auth</code>, <code>config</code>, <code>utility</code>,
-                <code>extension</code>, <code>test</code>, <code>migration</code>, <code>cli</code>,
-                <code>docs</code>, <code>constants</code>, <code>exceptions</code>, <code>init</code>,
-                <code>router</code>. Classification uses structural signals — import patterns,
-                decorator presence, naming conventions — not LLM inference.
-            </p>
-
-            <h5>Step 3: Stable ID Generation</h5>
-            <p>
-                Every entity gets a deterministic ID that remains stable across re-indexing
-                as long as the entity's name and location don't change. Format:
-                <code>TYPE STEM.SUFFIX</code> (e.g., <code>FN RDTKN.03</code>, <code>MT WBHK.02</code>).
-                The ID scheme uses vowel-stripped abbreviations with numeric suffixes for
-                disambiguation.
-            </p>
-            <table class="data-table">
-                <thead>
-                    <tr><th>Type</th><th>Meaning</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td><code>FN</code></td><td>Function</td></tr>
-                    <tr><td><code>CLS</code></td><td>Class</td></tr>
-                    <tr><td><code>MT</code></td><td>Method</td></tr>
-                    <tr><td><code>AMT</code></td><td>Async method</td></tr>
-                </tbody>
-            </table>
-            <p>
-                Stable IDs act as pointers for the LLM's memory, allowing it to maintain
-                a constant "mental map" even as the underlying code changes.
-            </p>
-
-            <h5>Step 4: Multi-level IR Generation</h5>
-            <p>Each entity is compressed at all levels simultaneously:</p>
-            <ul>
-                <li><strong>Index</strong> strips everything except type, ID, and domain/category tags</li>
-                <li><strong>Behavior</strong> adds: calls made (<code>C=</code>), flags (<code>F=</code> with single-letter codes: R returns, E raises, I conditionals, L loops, T try/except, W with-blocks), assignment count (<code>A=</code>), base class (<code>B=</code>)</li>
-                <li><strong>Source</strong> wraps the original code with entity metadata headers (<code>[TYPE ID @filepath:line]</code>)</li>
-            </ul>
-            <p>
-                Empty fields are omitted at Behavior level (no <code>C=-</code>, <code>F=-</code>,
-                <code>A=0</code>). Trivial entities below a token threshold skip compression
-                and store as source at all levels.
-            </p>
-
-            <h5>Step 5: Bearings Generation</h5>
-            <p>
-                Once classification and entity counting are complete, the index generates the
-                module-level map. This contains no entity-level IR — it's a directory of modules
-                grouped by category with dependency and churn information. For large codebases,
-                per-category bearings files are generated in
-                <code>.claude/bearings/{category}.md</code>.
-            </p>
-
-            <h5>Storage</h5>
-            <p>
-                SQLite with WAL mode, two-database design (entities + mappings). Created
-                automatically in <code>.codeir/</code> on first indexing. Incremental
-                re-indexing uses change detection — only modified files trigger reprocessing.
-            </p>
-
-            <hr>
-
-            <h4>A Note on What Was Evaluated and Removed</h4>
-            <p>
-                An intermediate level between Index and Behavior (type signatures only) was
-                tested and cut. It was too compressed to be safe — agents would confidently
-                reason from type information without seeing behavioral flags like exception
-                handling, leading to plans that missed critical error conditions. The
-                three-level stack is cleaner and each level has a clear, non-overlapping purpose.
-            </p>
-        </div>
-    </section>
-
-    <!-- ____________________________________Section 5: Benchmarks______________________________
-    <section class="layered-content">
-        <div class="l1-container">
-            <h2>Benchmark: Navigation Accuracy</h2>
-            <p>
-                CodeIR's oriented retrieval consistently outperforms embedding-based retrieval
-                across models.
-            </p>
-
-            <div class="action-bar">
-                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
-                </button>
-                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
-                </button>
-            </div>
-        </div>
-
-        <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Results</div>
-
-            <p>
-                Tested on fastapi-users (88 files, 24 benchmark tasks covering structural
-                reasoning, entity identification, and cross-module tracing):
-            </p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Condition</th>
-                        <th>Haiku Top-3</th>
-                        <th>Sonnet Top-3</th>
-                        <th>Opus Top-3</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>MPNet embedding retrieval</td>
-                        <td>70.8%</td>
-                        <td>58.3%</td>
-                        <td>33.3%</td>
-                    </tr>
-                    <tr>
-                        <td>BM25 lexical retrieval</td>
-                        <td>50.0%</td>
-                        <td>45.8%</td>
-                        <td>16.7%</td>
-                    </tr>
-                    <tr>
-                        <td>Raw source baseline</td>
-                        <td>50.0%</td>
-                        <td>45.8%</td>
-                        <td>25.0%</td>
-                    </tr>
-                    <tr class="data-table-highlight">
-                        <td>CodeIR (flow v2)</td>
-                        <td>79.2%</td>
-                        <td>83.3%</td>
-                        <td>83.3%</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p>
-                The striking pattern: baselines degrade as models get stronger. CodeIR holds
-                steady or improves. The delta grows from +8 points on Haiku to +50 points on Opus.
-            </p>
-            <p>
-                This isn't a paradox. Stronger models are better at recognizing when context
-                is insufficient — Opus sees five code fragments from embedding retrieval and
-                correctly identifies that it can't reason about the full picture. It hedges
-                instead of guessing. Give it the architectural map, and it goes from 33% to 83%.
-            </p>
-
-            <blockquote>
-                The implication: as models improve at knowing what they don't know,
-                fragment-based retrieval becomes less effective, not more. Structured context
-                becomes a requirement, not an optimization.
-            </blockquote>
-
-            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
-            </button>
-        </div>
-
-        <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Token Economics & Comparisons</div>
-
-            <h4>Token Economics</h4>
-            <p>Token costs tell the same story:</p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Condition</th>
-                        <th>Haiku Warm</th>
-                        <th>Sonnet Warm</th>
-                        <th>Opus Warm</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Raw source baseline</td>
-                        <td>6,727</td>
-                        <td>7,339</td>
-                        <td>16,846</td>
-                    </tr>
-                    <tr>
-                        <td>BM25 lexical</td>
-                        <td>6,973</td>
-                        <td>7,650</td>
-                        <td>26,220</td>
-                    </tr>
-                    <tr>
-                        <td>MPNet embedding</td>
-                        <td>2,296</td>
-                        <td>3,114</td>
-                        <td>6,575</td>
-                    </tr>
-                    <tr class="data-table-highlight">
-                        <td>CodeIR (flow v2)</td>
-                        <td>817</td>
-                        <td>669</td>
-                        <td>798</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <p>
-                CodeIR's per-task token cost is stable across models (~670–820 tokens) while
-                baseline costs scale with model capability. Opus baselines are especially
-                expensive because the model generates more reasoning tokens when uncertain.
-            </p>
-
-            <h4>Important Caveat</h4>
-            <p>
-                The "warm" token count assumes orientation cost (reading bearings.md + Index)
-                is amortized across a session. In practice, prompt caching makes this nearly
-                free after the first task — the bearings prefix is static between tasks on a
-                stable codebase. Cold tokens (including orientation) run higher, but only the
-                first task in a session pays the full cost.
-            </p>
-
-            <h4>Caching Economics</h4>
-            <p>
-                With prompt caching, warm-mode CodeIR is cheaper per task than the MPNet
-                embedding baseline. The Index/bearings prefix currently falls below the minimum
-                caching threshold for some models — padding it with richer context (more detailed
-                module descriptions, common task patterns) would simultaneously unlock caching
-                and potentially improve accuracy.
-            </p>
-
-            <h4>Multi-Model Comparison: CodeIR vs Aider Repo Map</h4>
-            <p>
-                On the same 24-task benchmark, CodeIR's filtered Index scored 91.7% top-3
-                accuracy vs Aider's repo map at ~50%. A structural note: CodeIR's entity IDs
-                are the same vocabulary as the ground truth (the model returns IDs it was
-                given), while Aider requires a mapping layer from natural-language entity
-                references to ground truth IDs. This is a genuine design advantage, not an
-                unfair comparison — but it's worth noting that some of Aider's misses come
-                from mapping failures rather than retrieval failures.
-            </p>
-            <p class="todo-note">[TODO: Per-task breakdown showing which task types each approach wins/loses on — structural tasks vs. keyword-matchable tasks]</p>
-        </div>
-    </section> -->
-
-    <!-- ____________________________________Section 6: Case Study 2______________________________-->
-    <section class="layered-content">
-        <div class="l1-container">
-            <h2>Case Study 2: Finding a Bug Across Module Boundaries</h2>
-            <!-- <p>
-                I planted a single-line bug in SQLAlchemy's unit of work system (689 files,
-                38,672 entities) and gave Claude only the symptoms. Both runs found it.
-                CodeIR did it in 39% fewer input tokens — reading 133 lines instead of 1,100.
-                The bug wasn't visible in any single file. It existed in the relationship
-                between two modules: a set filter in one method silently let bad state flow
-                into a session call in another.
-</p> -->
-<p>
-                I planted a single-line bug in SQLAlchemy’s unit-of-work system (689 files, 38,672 entities) and gave Claude only the symptoms.
-              </p>
-              <p>
-Both runs eventually found it.
-</p>
-<p>
-The difference was how they got there. The baseline run read over 1,100 lines of source across multiple files before forming a hypothesis.
-</p>
-<p>
-The CodeIR run followed the architectural trail: one search, one behavior inspection, and a targeted expansion of about 20 lines.
-</p>
-<p>
-Same diagnosis, 39% fewer input tokens.
-            </p>
-
-            <div class="action-bar">
-                <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
-                </button>
-                <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
-                </button>
-            </div>
-        </div>
-
-        <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Baseline vs. CodeIR</div>
-
-            <p>
-                The bug was a subtle filter addition in <code>finalize_flush_changes</code> —
-                the method that marks objects clean after a flush. Adding
-                <code>and not listonly</code> to a set comprehension looks defensively correct:
-                skip list-only states when computing deletes. But the leftover set
-                (<code>other = states.difference(isdel)</code>) still includes those list-only
-                states, and they flow into <code>_register_persistent()</code>, silently
-                polluting the identity map. Each file reads fine on its own. The problem only
-                appears when you trace the data flow across the set arithmetic and the
-                downstream call.
-            </p>
-            <p>
-                Without CodeIR, Claude read the full files — 799 lines of
-                <code>unitofwork.py</code>, then <code>session.py</code>, then
-                <code>identity.py</code> — over 1,100 lines before forming a hypothesis.
-            </p>
-            <p>
-                With CodeIR, the path was progressive: search found the method in one call,
-                Behavior IR revealed its callees without reading source, expand retrieved
-                only the 20 lines that mattered, and grep confirmed the <code>listonly</code>
-                pattern across the codebase. Total source read: 133 lines.
-            </p>
-
-            <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
-            </button>
-        </div>
-
-        <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Case Study: SQLAlchemy Bug Diagnosis</div>
-
-            <p>
-                I introduced a single-line bug into SQLAlchemy's unit of work system and asked
-                Claude Opus to find it twice: without CodeIR and with it.
-            </p>
-            <p>
-                SQLAlchemy is 689 files and 38,672 entities. The bug was in
-                <code>finalize_flush_changes</code>, the method that marks objects as clean or
-                deleted after a flush. I added <code>and not listonly</code> to a set
-                comprehension filter. It looks defensively correct. It's not. List-only states
-                fall through to <code>_register_persistent()</code> and silently pollute the
-                identity map. Each file looks fine on its own. The bug only exists in the
-                relationship between the set arithmetic and the downstream session call.
-            </p>
-            <p>The prompt described symptoms, not locations:</p>
-            <blockquote>
-                "After a flush that involves relationship cascades, objects that were only pulled
-                in as part of the cascade end up polluting the identity map as if they'd been
-                persisted. Downstream queries return stale data. It only breaks with a mix of
-                dirty objects and their unmodified related objects."
-            </blockquote>
-
-            <h4>Results</h4>
-            <p>Both runs found and correctly diagnosed the bug.</p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Run</th>
-                        <th>Input tokens</th>
-                        <th>Output tokens</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Baseline (no CodeIR)</td>
-                        <td>945,107</td>
-                        <td>5,281</td>
-                    </tr>
-                    <tr class="data-table-highlight">
-                        <td>CodeIR</td>
-                        <td>578,703</td>
-                        <td>2,887</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p><strong>39% fewer input tokens, 45% fewer output tokens.</strong> Same diagnosis.</p>
-
-            <h4>What Happened</h4>
-            <p>
-                Without CodeIR, Claude read entire files. All 799 lines of
-                <code>unitofwork.py</code>, the full <code>session.py</code>,
-                <code>identity.py</code>. Over 1,100 lines of source before forming a hypothesis.
-            </p>
-            <p>
-                With CodeIR, the path was progressive. Search found the method in one call.
-                Behavior-level IR showed what it calls without reading source. Expand retrieved
-                only the 20 lines that mattered. Grep with path scoping confirmed the
-                <code>listonly</code> pattern across the codebase. Total source read: about 133 lines.
-            </p>
-
-            <h4>Takeaway</h4>
-            <p>
-                In other case studies, CodeIR has found bugs that raw tools missed entirely.
-                Here, both approaches succeeded, but CodeIR got there faster and with fewer
-                tokens. 39% fewer input tokens, 45% fewer output tokens, and a targeted
-                133-line read instead of a 1,100-line brute force. That gap compounds over
-                longer tasks with multiple navigation cycles.
-            </p>
-
-            <div class="terminal-comparison">
-                <div class="terminal-window">
-                    <div class="terminal-header">
-                        <span class="terminal-dot red"></span>
-                        <span class="terminal-dot yellow"></span>
-                        <span class="terminal-dot green"></span>
-                        <span class="terminal-label">Without CodeIR</span>
-                    </div>
-                    <div class="terminal-body">
-                        <pre><code>This sounds like a tricky bug in the unit of work / cascade / identity map interaction. Let me get oriented in this SQLAlchemy codebase and trace through the relevant areas.
-
-⏺ Search(pattern: "**/*.md")
-  ⎿  Found 4 files (ctrl+o to expand)
-
-⏺ Search(pattern: "lib/sqlalchemy/orm/**/*.py")
-  ⎿  Found 38 files (ctrl+o to expand)
-
-                                                                                   10:42 AM claude-opus-4-5-20251101
-⏺ Let me explore the key files for session flush, identity map, and cascade handling.
-
-⏺ Read(lib/sqlalchemy/orm/session.py)
-
-⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
-  ⎿  Read 799 lines
-
-⏺ Read(lib/sqlalchemy/orm/identity.py)
-  ⎿  Read 303 lines
-
-                                                                                   10:42 AM claude-opus-4-5-20251101
-⏺ I found something interesting. Let me look at the finalize_flush_changes method more closely and the session's _register_persistent method.
-
-⏺ Search(pattern: "def _register_persistent", path: "lib/sqlalchemy/orm")
-  ⎿  Found 1 line (ctrl+o to expand)
-
-⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm")
-  ⎿  Found 13 lines (ctrl+o to expand)
-
-                                                                                   10:42 AM claude-opus-4-5-20251101
-⏺ I see a potential issue in the finalize_flush_changes logic. Let me read the session's _register_persistent method and the surrounding context.
-
-⏺ Read(lib/sqlalchemy/orm/session.py)
-  ⎿  Read 100 lines
-
-                                                                                   10:42 AM claude-opus-4-5-20251101
-⏺ I found the bug. Let me look at the finalize_flush_changes method more carefully and then confirm how listonly states get registered.
-
-⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
-  ⎿  Read 30 lines
-
-⏺ Search(pattern: "register_object.*listonly.*True", path: "lib/sqlalchemy/orm")
-  ⎿  Found 0 lines
-
-⏺ Search(pattern: "listonly=True", path: "lib/sqlalchemy/orm")
-  ⎿  Found 0 lines
-
-⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/dependency.py")
-  ⎿  Found 23 lines (ctrl+o to expand)
-
-⏺ Search(pattern: ", True\)", path: "lib/sqlalchemy/orm/unitofwork.py")
-  ⎿  Found 23 lines (ctrl+o to expand)
-
-∴ Thinking…
-  Interesting! Line 243-245 shows remove_state_actions which sets listonly=True:
-  def remove_state_actions(self, state):
-      """Remove pending actions for a state from the uowtransaction."""
-      isdelete = self.states[state][0]
-      self.states[state] = (isdelete, True)
-  So states can have their actions removed during flush processing but still remain in
-  the states dict with listonly=True. These are objects initially considered for flush
-  but then determined to not need any actual database operations.
-
-  Now I understand the bug clearly:
-  1. Objects are registered via register_object() during cascade processing
-  2. Some have actions removed via remove_state_actions() → listonly=True
-  3. In finalize_flush_changes():
-     - isdel correctly filters for isdelete=True AND listonly=False
-     - But other = states.difference(isdel) includes ALL remaining states,
-       including those with listonly=True
-  4. These listonly=True states are passed to _register_persistent() which:
-     - Replaces them in the identity map
-     - Commits their state (marks them clean)
-     - Registers them as altered
-
-                                                                                   10:43 AM claude-opus-4-5-20251101
-⏺ I've found the bug. Here's what's happening:
-
-  Root Cause Analysis
-  In finalize_flush_changes() (unitofwork.py lines 470-489):
-
-  states = set(self.states)
-  isdel = {
-      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
-  }
-  other = states.difference(isdel)  # &lt;-- BUG IS HERE
-
-  The listonly flag marks states pulled in during cascade processing that don't need
-  actual database operations. When computing other, it correctly filters listonly from
-  deleted states, but states.difference(isdel) includes ALL non-deleted states —
-  including those with listonly=True.
-
-  These listonly=True states then get passed to _register_persistent() which adds them
-  to the identity map and marks them as clean — even though they were never written.
-
-  The Fix:
-  other = {
-      s for (s, (isdelete, listonly)) in self.states.items()
-      if not isdelete and not listonly
-  }
-
-⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
-                    </div>
-                </div>
-                <div class="terminal-window">
-                    <div class="terminal-header">
-                        <span class="terminal-dot red"></span>
-                        <span class="terminal-dot yellow"></span>
-                        <span class="terminal-dot green"></span>
-                        <span class="terminal-label">With CodeIR</span>
-                    </div>
-                    <div class="terminal-body">
-                        <pre><code>This sounds like a bug in the unit of work or identity map handling during cascade flushes. Let me orient in the SQLAlchemy codebase and trace the relevant code paths.
-
-⏺ I'll investigate this flush finalization bug. Let me start by understanding the codebase structure and then locate the flush-related logic.
-
-⏺ Read(.claude/bearings-summary.md)
-  ⎿  Read 19 lines
-
-⏺ Bash(codeirsearch "flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -40)
-
-⏺ Bash(codeirsearch "finalize flush" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
-  ⎿    FNLZFLSHCHNGS         UOWTransaction.finalize_flush_changes     lib/sqlalchemy/orm/unitofwork.py:470  [method]
-       ATFLSH.03             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1545  [method]
-       ATFLSH.04             AsyncSession.autoflush                    lib/sqlalchemy/ext/asyncio/session.py:1554  [method]
-       FLSH.02               AsyncSession.flush                        lib/sqlalchemy/ext/asyncio/session.py:826  [async_method]
-       NTFLSH.02             AsyncSession.no_autoflush                 lib/sqlalchemy/ext/asyncio/session.py:1558  [method]
-       TSTFLSH               AsyncSessionTransactionTest.test_flush    test/ext/asyncio/test_session.py:613  [async_method]
-       ATFLSHTST             AutoFlushTest                             test/ext/test_associationproxy.py:94  [class]
-       FXTR.16               AutoFlushTest._fixture                    test/ext/test_associationproxy.py:120  [method]
-       ASSCTN                AutoFlushTest._fixture.Association        test/ext/test_associationproxy.py:128  [class]
-       INIT.685              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:131  [method]
-       INIT.686              AutoFlushTest._fixture.Association.__init__  test/ext/test_associationproxy.py:136  [method]
-       CHLD.11               AutoFlushTest._fixture.Child              test/ext/test_associationproxy.py:124  [class]
-       INIT.684              AutoFlushTest._fixture.Child.__init__     test/ext/test_associationproxy.py:125  [method]
-       PRNT.16               AutoFlushTest._fixture.Parent             test/ext/test_associationproxy.py:121  [class]
-       TSTPRMTRFLSH          AutoFlushTest._test_premature_flush       test/ext/test_associationproxy.py:159  [method]
-       DFNTBLS.123           AutoFlushTest.define_tables               test/ext/test_associationproxy.py:96  [method]
-       TSTDCTST              AutoFlushTest.test_dict_set               test/ext/test_associationproxy.py:206  [method]
-       SET.44                AutoFlushTest.test_dict_set.set_          test/ext/test_associationproxy.py:207  [method]
-       TSTLSTPPND            AutoFlushTest.test_list_append            test/ext/test_associationproxy.py:186  [method]
-       TSTLSTXTND            AutoFlushTest.test_list_extend            test/ext/test_associationproxy.py:191  [method]
-       TSTSTDD               AutoFlushTest.test_set_add                test/ext/test_associationproxy.py:196  [method]
-       TSTSTXTND             AutoFlushTest.test_set_extend             test/ext/test_associationproxy.py:201  [method]
-       ATFLSHTST.02          AutoflushTest                             test/orm/test_deferred.py:2780  [class]
-       STPCLSSS.193          AutoflushTest.setup_classes               test/orm/test_deferred.py:2782  [method]
-       A.355                 AutoflushTest.setup_classes.A             test/orm/test_deferred.py:2785  [class]
-       B.196                 AutoflushTest.setup_classes.B             test/orm/test_deferred.py:2791  [class]
-       TSTDFRRDTFLSHS        AutoflushTest.test_deferred_autoflushes   test/orm/test_deferred.py:2800  [method]
-       TSTRFLSH              BiDirectionalManyToOneTest.test_reflush   test/orm/test_cycles.py:509  [method]
-       TSTRFLSH2             BiDirectionalManyToOneTest.test_reflush_2  test/orm/test_cycles.py:529  [method]
-       TSTTFLSH              BulkDMLReturningInhTest.test_autoflush    test/orm/dml/test_bulk_statements.py:1267  [method]
-
-
-⏺ Bash(codeirsearch "list_only" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -20)
-  ⎿  No entities found.
-
-
-⏺ Bash(codeirsearch "identity persistent" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -30)
-  ⎿    TSTDNTTYFLG           SessionLifecycleEventsTest.test_loaded_as_persistent.test_identity_flag  test/orm/test_events.py:3432  [method]
-       IDNTTY                InstanceState.identity                    lib/sqlalchemy/orm/state.py:409  [method]
-       IDNTTY.02             Identity                                  lib/sqlalchemy/sql/schema.py:6381  [class]
-       INIT.529              Identity.__init__                         lib/sqlalchemy/sql/schema.py:6423  [method]
-       ASDCT.03              Identity._as_dict                         lib/sqlalchemy/sql/schema.py:6555  [method]
-       ASFRPDT.03            Identity._as_for_update                   lib/sqlalchemy/sql/schema.py:6539  [method]
-       COPY.33               Identity._copy                            lib/sqlalchemy/sql/schema.py:6550  [method]
-       STPRNT.19             Identity._set_parent                      lib/sqlalchemy/sql/schema.py:6517  [method]
-       COPY.32               Identity.copy                             lib/sqlalchemy/sql/schema.py:6547  [method]
-       ONNLL                 Identity.on_null                          lib/sqlalchemy/sql/schema.py:6509  [method]
-       IDNTTYTNCRMNTTST      IdentityAutoincrementTest                 lib/sqlalchemy/testing/suite/test_select.py:1771  [class]
-       DFNTBLS.32            IdentityAutoincrementTest.define_tables   lib/sqlalchemy/testing/suite/test_select.py:1776  [method]
-       TSTTNCRMNTWTHDNTTY    IdentityAutoincrementTest.test_autoincrement_with_identity  lib/sqlalchemy/testing/suite/test_select.py:1790  [method]
-       IDNTTYCHSR.05         IdentityChooser                           lib/sqlalchemy/ext/horizontal_shard.py:92  [class]
-       CALL.29               IdentityChooser.__call__                  lib/sqlalchemy/ext/horizontal_shard.py:93  [method]
-       IDNTTYCLMNTST.02      IdentityColumnTest                        test/engine/test_reflection.py:2343  [class]
-       IDNTTYCLMNTST         IdentityColumnTest                        lib/sqlalchemy/testing/suite/test_select.py:1691  [class]
-       DFNTBLS.115           IdentityColumnTest.define_tables          test/engine/test_reflection.py:2350  [method]
-       DFNTBLS.31            IdentityColumnTest.define_tables          lib/sqlalchemy/testing/suite/test_select.py:1698  [method]
-       INSRTDT.16            IdentityColumnTest.insert_data            lib/sqlalchemy/testing/suite/test_select.py:1725  [method]
-       TSTNSRTLWYSRRR        IdentityColumnTest.test_insert_always_error  lib/sqlalchemy/testing/suite/test_select.py:1761  [method]
-       FN                    IdentityColumnTest.test_insert_always_error.fn  lib/sqlalchemy/testing/suite/test_select.py:1762  [method]
-       TSTSLCTLL.02          IdentityColumnTest.test_select_all        lib/sqlalchemy/testing/suite/test_select.py:1739  [method]
-       TSTSLCTCLMNS.02       IdentityColumnTest.test_select_columns    lib/sqlalchemy/testing/suite/test_select.py:1754  [method]
-       TSTTBLRFLCTN.02       IdentityColumnTest.test_table_reflection  test/engine/test_reflection.py:2358  [method]
-       IDNTTYDDL             IdentityDDL                               test/sql/test_identity_column.py:156  [class]
-       IDNTTYDFLTSNPDTTST    IdentityDefaultsOnUpdateTest              test/orm/test_defaults.py:418  [class]
-       DFNTBLS.301           IdentityDefaultsOnUpdateTest.define_tables  test/orm/test_defaults.py:427  [method]
-       STPCLSSS.188          IdentityDefaultsOnUpdateTest.setup_classes  test/orm/test_defaults.py:436  [method]
-       THNG.20               IdentityDefaultsOnUpdateTest.setup_classes.Thing  test/orm/test_defaults.py:437  [class]
-
-
-                                                                                                                                    10:33 AM claude-opus-4-5-20251101
-⏺ Found finalize_flush_changes at unitofwork.py:470. Let me examine this method and search for state transition logic.
-
-⏺ Bash(codeirshow FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main --level Behavior 2>/dev/null)
-  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
-     File:   lib/sqlalchemy/orm/unitofwork.py:470
-     Level:  Behavior
-
-     MT FNLZFLSHCHNGS C=_register_persistent,_remove_newly_deleted,difference,items,set F=IR A=3 #DB #CORE
-
-
-⏺ Bash(codeirexpand FNLZFLSHCHNGS --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null)
-  ⎿  Entity: UOWTransaction.finalize_flush_changes  [method]
-     File:   lib/sqlalchemy/orm/unitofwork.py:470-489
-
-         def finalize_flush_changes(self) -> None:
-             """Mark processed objects as clean / deleted after a successful
-             flush().
-             This method is called within the flush() method after the
-             execute() method has succeeded and the transaction has been committed.
-             """
-             if not self.states:
-                 return
-             states = set(self.states)
-             isdel = {
-                 s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
-             }
-             other = states.difference(isdel)
-             if isdel:
-                 self.session._remove_newly_deleted(isdel)
-             if other:
-                 self.session._register_persistent(other)
-
-
-                                                                                                                                    10:33 AM claude-opus-4-5-20251101
-⏺ Found the bug. Look at lines 481-488:
-
-  isdel = {
-      s for (s, (isdelete, listonly)) in self.states.items() if isdelete and not listonly
-  }
-  other = states.difference(isdel)
-
-  The issue: other is calculated as "everything NOT in isdel", but isdel only contains delete operations. List-only states where listonly=True but isdelete=False still end
-  up in other and incorrectly get passed to _register_persistent().
-
-  Let me verify by checking how states are registered and confirm the fix:
-
-⏺ Bash(codeirsearch "register_object" --repo-path tests/testRepositories/sqlalchemy-main 2>/dev/null | head -15)
-  ⎿    RGSTRBJCT             UOWTransaction.register_object            lib/sqlalchemy/orm/unitofwork.py:308  [method]
-       RGSTRBJCT.02          MetaData._register_object                 lib/sqlalchemy/sql/schema.py:6271  [method]
-
-
-⏺ Search(pattern: "listonly", path: "lib/sqlalchemy/orm/unitofwork.py")
-  ⎿  Found 11 lines (ctrl+o to expand)
-
-                                                                                                                                    10:34 AM claude-opus-4-5-20251101
-⏺ Confirmed. The pattern is used correctly elsewhere (lines 526-527, 612-613):
-
-  if not listonly:
-
-  But finalize_flush_changes misses this check. Let me show you the exact bug and fix:
-
-⏺ Read(lib/sqlalchemy/orm/unitofwork.py)
-  ⎿  Read 30 lines
-
-                                                                                                                                    10:34 AM claude-opus-4-5-20251101
-⏺ The Bug (line 485):
-
-  other = states.difference(isdel)
-
-  This calculates other as "all states except deletes", but list-only states where isdelete=False are NOT excluded. They end up in other and get passed to
-  _register_persistent(), incorrectly moving them to persistent state.
-
-  The Fix:
-
-  other = {
-      s for (s, (isdelete, listonly)) in self.states.items()
-      if not isdelete and not listonly
-  }
-
-  Here's the corrected method:
-
-⏺ Update(lib/sqlalchemy/orm/unitofwork.py)</code></pre>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- ____________________________________Section 7: Case Study 3______________________________-->
     <section class="layered-content">
         <div class="l1-container">
@@ -2227,6 +2205,7 @@ Same diagnosis, 39% fewer input tokens.
             <div class="depth-tag-L3">Level 3: Full Token Accounting & Reasoning Traces</div>
             <p class="todo-note">[TODO: Full token accounting, reasoning trace comparison]</p>
 
+            <!-- REMOVED: Terminal comparison windows for Flask case study
             <div class="terminal-comparison">
                 <div class="terminal-window">
                     <div class="terminal-header">
@@ -2494,6 +2473,7 @@ Same diagnosis, 39% fewer input tokens.
                     </div>
                 </div>
             </div>
+            END REMOVED -->
         </div>
     </section>
 
