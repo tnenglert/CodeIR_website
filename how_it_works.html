@@ -107,36 +107,44 @@
                     <thead>
                         <tr>
                             <th>Repository</th>
-                            <th>Files</th>
                             <th>Entities</th>
-                            <th>Raw tokens (est.)</th>
-                            <th>Index-level tokens</th>
+                            <th>Raw Python (est.)</th>
+                            <th>CodeIR Index</th>
+                            <th>Compression</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>Flask</td>
-                            <td>83</td>
                             <td>1,629</td>
-                            <td>[TODO]</td>
-                            <td>[TODO]</td>
-                        </tr>
-                        <tr>
-                            <td>Django</td>
-                            <td>2,894</td>
-                            <td>41,819</td>
-                            <td>[TODO]</td>
-                            <td>[TODO]</td>
+                            <td>~148k</td>
+                            <td>19k</td>
+                            <td>8:1</td>
                         </tr>
                         <tr>
                             <td>Tryton</td>
-                            <td>2,375</td>
                             <td>20,457</td>
-                            <td>[TODO]</td>
-                            <td>[TODO]</td>
+                            <td>~2.8M</td>
+                            <td>214k</td>
+                            <td>13:1</td>
+                        </tr>
+                        <tr>
+                            <td>SQLAlchemy</td>
+                            <td>38,672</td>
+                            <td>~5.0M</td>
+                            <td>467k</td>
+                            <td>11:1</td>
+                        </tr>
+                        <tr>
+                            <td>Django</td>
+                            <td>41,819</td>
+                            <td>~4.7M</td>
+                            <td>475k</td>
+                            <td>10:1</td>
                         </tr>
                     </tbody>
                 </table>
+                <p class="table-footnote">Token estimates use 1 token ≈ 4 characters. Actual counts may be slightly lower.</p>
 
                 <p>
                     At Index representation, CodeIR fits ~20,000 entities per 200k context window.

@@ -743,6 +743,14 @@ blockquote {
   opacity: 0.9;
 }
 
+/* Table footnote */
+.table-footnote {
+  font-size: 0.78rem;
+  opacity: 0.45;
+  margin-top: 0.75rem;
+  font-style: italic;
+}
+
 /* TODO notes */
 .todo-note {
   font-family: var(--mono-font);
