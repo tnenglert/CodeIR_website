@@ -147,10 +147,9 @@
                 <p class="table-footnote">Token estimates use 1 token ≈ 4 characters. Actual counts may be slightly lower.</p>
 
                 <p>
-                    At Index representation, CodeIR fits ~20,000 entities per 200k context window.
-                    Raw source fits roughly 200 entities in the same space. The compression ratio
-                    improves with repository size as structural redundancy collapses - larger
-                    codebases have proportionally more repeated patterns that compress well.
+                    At Index level, CodeIR fits roughly 18,000 entities in a 200k context window.
+                    The same window holds less than 2,000 entities as raw source and only if you
+                    could perfectly select which files to load, which in practice you can't.
                 </p>
             </div>
         </section>
@@ -2620,7 +2619,7 @@ Now I can propose a comprehensive plan.
     <section class="content">
         <div class="cta-block">
             <p>
-                CodeIR is open source. <a href="#" class="cta-link">TODO: link</a>
+                CodeIR is open source. <a href="https://github.com/tnenglert/CodeIR" class="cta-link">GitHub</a>
             </p>
             <pre class="cta-install"><code>pip install codeir</code></pre>
             <p class="cta-sub">Works with Claude Code out of the box.</p>
