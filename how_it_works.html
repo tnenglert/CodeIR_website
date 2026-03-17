@@ -65,17 +65,17 @@
                 
                 <div class="action-bar">
                   <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                      <span class="plus-icon">+</span> Explanation (L2)
+                      <span class="plus-icon">+</span> Explanation
                   </button>
                   <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                      <span class="plus-icon">+</span> Deep Dive (L3)
+                      <span class="plus-icon">+</span> Deep Dive
                   </button>
               </div>
           </div>
             </div>
         
             <div class="l2-container hidden-layer">
-                <div class="depth-tag-L2">Level 2: The Mechanics</div>
+                <div class="depth-tag-L2">Why Source Code Is the Wrong Format</div>
                 <p>
                     The problem isn't just volume - it's about what kind of information fills the context window. 
                     Consider what a transformer actually processes when it sees a Python function:
@@ -95,12 +95,12 @@
                 </p>
                 
                 <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                  <span class="plus-icon">+</span> Deep Dive (L3)
+                  <span class="plus-icon">+</span> Deep Dive
               </button>
           </div>
         
             <div class="l3-container hidden-layer">
-                <div class="depth-tag-L3">Level 3: Architecture & Benchmarks</div>
+                <div class="depth-tag-L3">The Numbers Behind the Problem</div>
                 <p>Scale of the problem across real codebases:</p>
 
                 <table class="data-table">
@@ -149,7 +149,7 @@
     <!-- ____________________________________Section 6: Case Study 2______________________________-->
     <section class="layered-content">
         <div class="l1-container">
-            <h2>Claude Already Knows It Needs a Map — But It's Drawing One from Scratch</h2>
+            <h2>Claude Already Knows It Needs a Map But It's Drawing One from Scratch</h2>
             <p>
                 I planted a single-line bug in SQLAlchemy’s unit-of-work system and gave Claude only the symptoms. Both runs found the same bug and proposed the same fix.
             </p>
@@ -168,16 +168,16 @@
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Baseline vs. CodeIR</div>
+            <div class="depth-tag-L2">How They Got There</div>
 
             <h4>How They Got There</h4>
             <p>
@@ -194,7 +194,7 @@
             </p>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
@@ -571,16 +571,16 @@
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Setup & Workflow</div>
+            <div class="depth-tag-L2">Setup &amp; Workflow</div>
 
             <h4>Setup</h4>
 <pre><code>pip install codeir
@@ -662,12 +662,12 @@ codeir index ./your-repo</code></pre>
             </p>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
         <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: CLI Reference & IR Format</div>
+            <div class="depth-tag-L3">CLI Reference &amp; IR Format</div>
 
             <h4>Available CLI Commands</h4>
 <pre><code>codeir index &lt;path&gt;                              # Index or re-index a repository
@@ -806,16 +806,16 @@ This allows models to orient themselves across thousands of entities before expa
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: The Three Layers</div>
+            <div class="depth-tag-L2">Index, Behavior, Source</div>
 
             <div class="ir-cards">
                 <div class="ir-card">
@@ -856,12 +856,12 @@ This allows models to orient themselves across thousands of entities before expa
             </p>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
         <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Compilation Pipeline</div>
+            <div class="depth-tag-L3">The Compilation Pipeline</div>
 
             <h4>The Compilation Pipeline in Detail</h4>
 
@@ -960,16 +960,16 @@ This allows models to orient themselves across thousands of entities before expa
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Results</div>
+            <div class="depth-tag-L2">Accuracy by Model &amp; Method</div>
 
             <p>
                 Tested on fastapi-users (88 files, 24 benchmark tasks covering structural
@@ -1031,12 +1031,12 @@ This allows models to orient themselves across thousands of entities before expa
             </blockquote>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
         <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Token Economics & Comparisons</div>
+            <div class="depth-tag-L3">Token Economics &amp; Comparisons</div>
 
             <h4>Token Economics</h4>
             <p>Token costs tell the same story:</p>
@@ -1135,16 +1135,16 @@ This allows models to orient themselves across thousands of entities before expa
           
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
     
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Mechanics</div>
+            <div class="depth-tag-L2">What Each Run Found</div>
 
             <h4>What the baseline missed</h4>
             <p>
@@ -1169,7 +1169,7 @@ This allows models to orient themselves across thousands of entities before expa
             </p>
             
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
     
@@ -2134,7 +2134,7 @@ Now I can propose a comprehensive plan.
     <!-- ____________________________________Section 7: Case Study 3______________________________-->
     <section class="layered-content">
         <div class="l1-container">
-            <h2>Case Study 3: Same Answer, Fewer Tokens</h2>
+            <h2>1,620 Lines to Find Five Methods</h2>
             <!-- <p>
                 I asked both to plan per-blueprint session handling in Flask (83 files,
                 1,629 entities). Both found the same timing challenge — sessions open before
@@ -2160,50 +2160,101 @@ Now I can propose a comprehensive plan.
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: Better Navigation, Not Smaller Files</div>
+            <div class="depth-tag-L2">Navigation vs. Brute Force</div>
 
             <p>
-                The task: add per-blueprint session interfaces to Flask. The core challenge
-                is timing — <code>AppContext._get_session()</code> runs before
-                <code>match_request()</code>, so we don't know which blueprint will handle the
-                request when the session opens. Both runs identified this, proposed the same
-                five entities that need changes, and surfaced the same design tradeoff:
-                deferred session loading vs. per-blueprint save only.
+                The task: add per-blueprint session interfaces to Flask. The core challenge is timing: <code>AppContext._get_session()</code> runs before <code>match_request()</code>, so the session opens before the framework knows which blueprint will handle the request. Both runs identified this, proposed the same five entities that need changes, and surfaced the same design tradeoff: deferred session loading vs per-blueprint save only.
             </p>
             <p>
-                The baseline got there by reading <code>sessions.py</code> (386 lines),
-                <code>ctx.py</code> (541 lines), and <code>blueprints.py</code> (693 lines)
-                in full — 1,620 lines of source to build the picture.
+                The difference was how they got there.
             </p>
             <p>
-                CodeIR got there by searching for session and blueprint entities, inspecting
-                Behavior IR to understand call relationships, using <code>callers</code> to
-                trace who calls <code>open_session</code> and <code>save_session</code>, and
-                expanding only the specific methods that mattered. It never read a full file.
+                The baseline built its understanding by reading source files directly: <code>sessions.py</code> (386 lines), <code>ctx.py</code> (541 lines), and <code>blueprints.py</code> (693 lines). About 1,600 lines in total, most of which wasn't relevant to the final answer.
             </p>
             <p>
-                The token savings aren't a compression trick — both approaches read the same
-                codebase. The difference is navigation. CodeIR knew where to look, so it
-                didn't have to read everything.
+                CodeIR took a different path. It navigated the system structurally, searching for session and blueprint entities, inspecting behavior summaries to understand call relationships, tracing callers of <code>open_session</code> and <code>save_session</code>, and expanding only the specific methods involved. It never read a full file.
+            </p>
+            <p>
+                Both runs used a similar number of tokens but the baseline spent them reading broadly and filtering down, while CodeIR navigated directly to the relevant parts of the system and read only what it needed.
             </p>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
         <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Full Token Accounting & Reasoning Traces</div>
-            <p class="todo-note">[TODO: Full token accounting, reasoning trace comparison]</p>
+            <div class="depth-tag-L3">Flask Session Override: Full Breakdown</div>
+
+            <p>
+                I asked Claude Opus 4.6 to design per-blueprint session overrides for Flask (83 files, 1,629 entities). Each blueprint should be able to specify its own session interface instead of using the app-wide one. I ran it twice: once without CodeIR and once with it.
+            </p>
+            <p>
+                Both runs arrived at the same diagnosis and the same design. The core constraint is timing: <code>AppContext._get_session()</code> fires before <code>match_request()</code> resolves which blueprint will handle the request. You can't override the session interface per-blueprint if the session is already open before the blueprint is known. Both runs identified the same five entities that need modification and surfaced the same tradeoff between deferred session loading and per-blueprint save-only.
+            </p>
+            <p>The prompt:</p>
+            <blockquote>
+                "We're extending Flask's Blueprint system to support per-blueprint session overrides. Each blueprint should be able to specify its own session interface instead of using the app-wide one. Where would this need to be wired in, and what entities would need to change?"
+            </blockquote>
+
+            <h4>Results</h4>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>API calls</th>
+                        <th>Tool calls</th>
+                        <th>Input tokens</th>
+                        <th>Output tokens</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Baseline (no CodeIR)</td>
+                        <td>8</td>
+                        <td>7</td>
+                        <td>192,354</td>
+                        <td>2,065</td>
+                    </tr>
+                    <tr class="data-table-highlight">
+                        <td>CodeIR</td>
+                        <td>9</td>
+                        <td>16</td>
+                        <td>265,238</td>
+                        <td>3,747</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                On a codebase this size, both approaches cost about the same in tokens. This is a small codebase. Flask is 83 files in total and the baseline's brute-force approach of reading three files cover-to-cover is cheap when the files are only a few hundred lines each.
+            </p>
+            <p>
+                The difference is in what Claude read and how it got there.
+            </p>
+
+            <h4>What Happened</h4>
+            <p>
+                Without CodeIR, Claude globbed the directory, grepped for <code>class Blueprint</code> and <code>session_interface</code>, then read three files in full: <code>sessions.py</code> (386 lines), <code>ctx.py</code> (541 lines), and <code>sansio/blueprints.py</code> (693 lines). That's 1,620 lines of source, most of which was irrelevant to the task. The relevant methods are maybe 80 lines across all three files.
+            </p>
+            <p>
+                With CodeIR, Claude searched for session and blueprint entities in the IR, inspected their Behavior summaries to understand call relationships without reading source, used <code>callers</code> to trace what calls <code>open_session</code> and <code>save_session</code>, then expanded only the specific methods involved. It made more tool calls (16 vs 7) but each one was targeted: a behavior inspection or a 20-line expansion rather than a 693-line file read. It never opened a full file.
+            </p>
+
+            <h4>Takeaway</h4>
+            <p>
+                Flask is the case where CodeIR's advantage is smallest. On a codebase this size, reading whole files is fast and cheap. The navigation advantage matters more as repos grow, which is what the SQLAlchemy and Tryton case studies show. But even here, the difference in approach is visible: one run reads everything and filters afterward, the other navigates to what matters and reads only that.
+            </p>
 
             <!-- REMOVED: Terminal comparison windows for Flask case study
             <div class="terminal-comparison">
@@ -2496,16 +2547,16 @@ Now I can propose a comprehensive plan.
 
             <div class="action-bar">
                 <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                    <span class="plus-icon">+</span> Explanation (L2)
+                    <span class="plus-icon">+</span> Explanation
                 </button>
                 <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                    <span class="plus-icon">+</span> Deep Dive (L3)
+                    <span class="plus-icon">+</span> Deep Dive
                 </button>
             </div>
         </div>
 
         <div class="l2-container hidden-layer">
-            <div class="depth-tag-L2">Level 2: The Current Landscape</div>
+            <div class="depth-tag-L2">The Current Landscape</div>
 
             <p>The current landscape of approaches:</p>
 
@@ -2537,12 +2588,12 @@ Now I can propose a comprehensive plan.
             </div>
 
             <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                <span class="plus-icon">+</span> Deep Dive (L3)
+                <span class="plus-icon">+</span> Deep Dive
             </button>
         </div>
 
         <div class="l3-container hidden-layer">
-            <div class="depth-tag-L3">Level 3: Limits & Scale</div>
+            <div class="depth-tag-L3">Limits &amp; Scale</div>
 
             <p class="todo-note">[TODO: One more unfamiliar repo test to validate the approach generalizes. Discussion of where CodeIR's approach breaks — repos with heavy metaprogramming or dynamic dispatch that AST analysis can't capture, non-Python languages.]</p>
 
