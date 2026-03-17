@@ -1247,9 +1247,17 @@ codeir index ./your-repo</code></pre>
                     <p><code>codeir callers</code> finds everything that references a given entity: import-level, local, and fuzzy matching (results marked <code>~</code> are probable but not certain). <code>codeir impact</code> does reverse dependency analysis via BFS — showing affected entities grouped by distance with the full dependency chain.</p>
                 </div>
                 <div class="workflow-arrow">↓</div>
-                <div class="workflow-step workflow-step--last">
+                <div class="workflow-step">
                     <div class="workflow-step-header">
                         <span class="workflow-num">06</span>
+                        <span class="workflow-label">Scope</span>
+                    </div>
+                    <p><code>codeir scope</code> returns the minimal context needed to safely modify an entity: its callers, callees, and sibling methods (same class). Use before editing to understand what you might break and what the entity depends on.</p>
+                </div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step workflow-step--last">
+                    <div class="workflow-step-header">
+                        <span class="workflow-num">07</span>
                         <span class="workflow-label">Expand</span>
                     </div>
                     <p>Only when the agent needs to verify exact implementation details or make a change does it expand to raw source. This is the last step, not the first.</p>
@@ -1277,9 +1285,10 @@ codeir show &lt;entity_id&gt; [--level Index|Behavior] # Show entity IR at speci
 codeir expand &lt;entity_id&gt;                        # Expand to full source
 codeir callers &lt;entity_id&gt;                       # Three-tier caller resolution
 codeir impact &lt;entity_id&gt; [--depth N]            # Reverse dependency analysis (BFS)
-codeir bearings                                  # Regenerate bearings.md
-codeir stats                                     # Compression statistics
-codeir module-map                                # Show classified module map</code></pre>
+codeir scope &lt;entity_id&gt;                         # Minimal context for safe modification
+codeir bearings                                  # Summary + menu with token estimates
+codeir bearings [category]                       # Specific category (e.g., core_logic)
+codeir bearings --full                           # Full module map</code></pre>
 
             <p>
                 CodeIR is globally installed via symlink at <code>/usr/local/bin/codeir</code>.
@@ -1375,17 +1384,14 @@ async def read_token(token: str, session: Session) -> TokenData:
             <hr>
 
             <h4>Example Workflow (Tryton codebase)</h4>
-<pre><code>1. codeir search "flush"              → no relevant results
+<pre><code>1. codeir search "flush"               → no relevant results
 2. codeir grep "def flush" --path orm/ → finds entity FLSH.04 in orm/session.py
 3. codeir show FLSH.04                → see Behavior IR: what it calls, flags, assignments
 4. codeir callers FLSH.04             → see what depends on it
 5. codeir impact FLSH.04 --depth 2    → understand blast radius before changing
-6. codeir expand FLSH.04              → read source only for the entity you need to modify</code></pre>
+6. codeir scope FLSH.04               → get callers, callees, siblings for safe modification
+7. codeir expand FLSH.04              → read source only for the entity you need to modify</code></pre>
 
-            <p>
-                <em>Stay at the highest abstraction level that lets you make your current decision.
-                Use expand only on entities you need to modify.</em>
-            </p>
         </div>
     </section>
 
@@ -2604,7 +2610,7 @@ Same diagnosis, 39% fewer input tokens.
         <div class="claude-feedback claude-review-card">
             <div class="claude-header">
                 <span class="spark-icon">✨</span>
-                <span>Claude on SQLAlchemy</span>
+                <span>Claude on SQLAlchemy Bug Search:</span>
             </div>
             <div class="claude-pullquote">
                 "I found the bug in ~6 queries across a 663-file, 38k-entity codebase. Without CodeIR, I'd have been grepping through the ORM internals much longer."
@@ -2638,7 +2644,7 @@ Same diagnosis, 39% fewer input tokens.
         <div class="claude-feedback claude-review-card">
             <div class="claude-header">
                 <span class="spark-icon">✨</span>
-                <span>Claude on Django</span>
+                <span>Claude on Django Refactoring Plan:</span>
             </div>
             <div class="claude-pullquote">
                 "Going from Behavior to exact source with CodeIR expand was fast. I knew what I was looking for before reading the code."
