@@ -37,6 +37,24 @@
     <div class="faq-category">
         <h2>The Basics</h2>
 
+         <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>What does IR stand for?</span>
+                <span class="faq-arrow">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+                <p>
+                    IR stands for Intermediate Representation. In compiler 
+                    design it's a data structure that represents source code 
+                    in a way that's easier for machines to analyze and optimize. 
+                    CodeIR is an IR specifically designed for representing Python 
+                    codebases in a compact, structured format that LLMs can reason 
+                    over without reading raw source.
+                </p>
+              
+            </div>
+        </div>
+
         <div class="faq-item">
             <button class="faq-question" onclick="toggleFaq(this)">
                 <span>How long does it take to generate the IR?</span>
