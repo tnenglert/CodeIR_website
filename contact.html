@@ -33,8 +33,18 @@
 
     <main class="container" style="text-align: center; padding-top: 100px;">
         <p style="font-size: 1.1rem; opacity: 0.7; margin-bottom: 24px;">Get in touch</p>
-        <a href="mailto:hello@codeir.dev" style="color: var(--accent-L2); font-size: 1.4rem; text-decoration: none; font-family: var(--mono-font);">hello@codeir.dev</a>
+        <span onclick="copyEmail()" style="color: var(--accent-L2); font-size: 1.4rem; font-family: var(--mono-font); cursor: pointer;">hello@codeir.dev</span>
+        <p id="copy-toast" style="font-size: 0.8rem; opacity: 0; margin-top: 12px; transition: opacity 0.3s ease;">copied</p>
     </main>
 
+<script>
+function copyEmail() {
+    navigator.clipboard.writeText('hello@codeir.dev').then(() => {
+        const toast = document.getElementById('copy-toast');
+        toast.style.opacity = '0.5';
+        setTimeout(() => toast.style.opacity = '0', 1800);
+    });
+}
+</script>
 </body>
 </html>
