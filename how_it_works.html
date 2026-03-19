@@ -793,16 +793,10 @@ async def read_token(token: str, session: Session) -> TokenData:
         <div class="l1-container">
             <h2>How It Works Under the Hood</h2>
             <p>
-              Instead of reading files and hoping to find the right ones, 
-              CodeIR gives the agent the whole system in view, with the 
-              ability to drill into any detail on demand.
+              Instead of searching files and hoping to find the right ones, CodeIR gives the agent every function, class, and method in view with the ability to drill into deeper levels of functional detail on demand.
             </p>
             <p>
-              CodeIR compiles a codebase into a hierarchical
-              representation with three levels: Index, Behavior and Source.
-            </p>
-            <p>
-This allows models to orient themselves across thousands of entities before expanding only the specific code they need.
+              CodeIR compiles a codebase into a hierarchical representation of functionality with three levels: Index, Behavior, and Source. This allows models to orient themselves across thousands of entities and understand how they function together before expanding only the specific code they need.
             </p>
 
             <div class="action-bar">
