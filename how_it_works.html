@@ -561,15 +561,13 @@
         <div class="l1-container">
             <h2>What CodeIR Looks Like in Practice</h2>
             <p>
-              CodeIR is a tool that builds an architectural map of a repository.
-</p>
-<p>
-              You index a repo once, and your coding agent can see the structure of the entire 
-              system: entities, relationships, and behavioral signatures before reading a 
-              single source file.
+              CodeIR is essentially a semantic compiler for codebases. It is software that takes raw source code and distills every function, class, and method into a layered representation of what it does, what it touches, and how central it is, no LLM required.
             </p>
             <p>
-              Instead of navigating through files, the model navigates through architecture.
+              Your coding agent gets to see the whole system's functionality in its context window, and can drill from a 20-token summary down to full source only when it needs to.
+            </p>
+            <p>
+              Instead of reading code to understand functionality the model starts with understanding and reads code to confirm details.
             </p>
 
             <div class="action-bar">
@@ -722,10 +720,10 @@ MD HOOK hooks.py    | cat:extension  | entities:7   | deps:sessions | churn:-
             <h4>Entity IR at Each Level</h4>
 
             <h5>Index - orientation (selection-level)</h5>
-<pre><code>FN RDTKN #HTTP #CORE</code></pre>
+<pre><code>MT FLSH.05 #HTTP #CORE</code></pre>
 
             <h5>Behavior - what it does and calls (reasoning-level)</h5>
-<pre><code>MT WBHK.02 C=webhook_charge_captured,webhook_charge_dispute_closed,webhook_charge_dispute_created,webhook_charge_expired,webhook_charge_failed,webhook_charge_pending F=IR A=2 #CORE</code></pre>
+<pre><code>MT FLSH.05 C=UOWTransaction,UnmappedInstanceError,CATBGNT,_begin,_commit_all_states,_expunge_states F=EILRTW A=22 #HTTP #CORE</code></pre>
 
             <p>
                 Behavior fields: <code>C=</code> calls made, <code>F=</code> flags
