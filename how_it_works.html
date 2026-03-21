@@ -36,7 +36,7 @@
     <main class="container">
 
       <!-- ____________________________________Section 0: How CodeIR Represents Code______________________________-->
-        <section class="layered-content">
+        <section class="layered-content" id="ir-levels-section">
             <div class="l1-container">
                 <h2>How CodeIR Represents Code</h2>
                 <p>
@@ -44,10 +44,10 @@
                 </p>
 
                 <div class="action-bar">
-                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                    <button class="reveal-btn" onclick="toggleAllLayers(this, 'l2')">
                         <span class="plus-icon">+</span> Explanation
                     </button>
-                    <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                    <button class="reveal-btn secondary-btn" id="ir-l3-btn" onclick="toggleAllLayers(this, 'l3')" style="display: none;">
                         <span class="plus-icon">+</span> Deep Dive
                     </button>
                 </div>
@@ -56,56 +56,23 @@
             <div class="l2-container hidden-layer">
                 <div class="depth-tag-L2">Index — what exists and where it fits</div>
                 <pre><code>AMT ATHNTCT.02 #AUTH #CORE</code></pre>
-
-                <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                    <span class="plus-icon">+</span> Deep Dive
-                </button>
             </div>
 
             <div class="l3-container hidden-layer">
-                <div class="depth-tag-L3">Index Detail</div>
                 <p>
                     Entity type (AMT = async method), stable ID (ATHNTCT.02), domain tags (#AUTH #CORE). At this level the full codebase fits in a single context window. The agent scans thousands of these to identify which entities are relevant to a task. Token cost: ~10 tokens per entity.
                 </p>
-            </div>
-        </section>
-
-        <section class="layered-content">
-            <div class="l1-container" style="padding-top: 0;">
-                <div class="action-bar">
-                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                        <span class="plus-icon">+</span> Explanation
-                    </button>
-                    <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
-                        <span class="plus-icon">+</span> Deep Dive
-                    </button>
-                </div>
             </div>
 
             <div class="l2-container hidden-layer">
                 <div class="depth-tag-L2">Behavior — what it does and what it touches</div>
                 <pre><code>AMT ATHNTCT.02 C=get_by_email,hash,update,verify_and_update F=AIRT A=2 #AUTH #CORE</code></pre>
-
-                <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
-                    <span class="plus-icon">+</span> Deep Dive
-                </button>
             </div>
 
             <div class="l3-container hidden-layer">
-                <div class="depth-tag-L3">Behavior Detail</div>
                 <p>
                     Same entity with outgoing calls (C=), behavioral flags (F=: A=assignments/augmented assigns, I=conditionals, R=returns, T=try/except), assignment count (A=), and domain tags. The agent can reason about dependencies, complexity, and blast radius without reading source. This is the level where most architectural decisions get made — the agent knows what this function touches and how complex it is. Token cost: ~25 tokens per entity.
                 </p>
-            </div>
-        </section>
-
-        <section class="layered-content">
-            <div class="l1-container" style="padding-top: 0;">
-                <div class="action-bar">
-                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
-                        <span class="plus-icon">+</span> Explanation
-                    </button>
-                </div>
             </div>
 
             <div class="l2-container hidden-layer">
@@ -142,9 +109,7 @@
                     This is what the model reads without CodeIR — every time, in full, whether it needs the implementation details or not. ~120 tokens for one entity. Multiply across thousands of entities and the context window fills with syntax, comments, and formatting before the model has oriented itself. With CodeIR, this level is reached only when the agent needs to verify implementation or make a change.
                 </p>
             </div>
-        </section>
 
-        <section class="layered-content">
             <div class="l1-container" style="padding-top: 0;">
                 <p>
                     The workflow in practice: the agent reads Index to find what's relevant, inspects Behavior to understand how entities connect, and expands to Source only where it needs to act. Most entities in a session never go past Behavior. The ones that get expanded are the ones that actually matter.
@@ -1018,6 +983,48 @@ async def read_token(token: str, session: Session) -> TokenData:
     </main>
 
     <script>
+  function toggleAllLayers(button, layerClass) {
+    const section = document.getElementById('ir-levels-section');
+    const layers = section.querySelectorAll(`.${layerClass}-container`);
+    if (!layers.length) return;
+
+    const isOpening = !layers[0].classList.contains('is-revealed');
+
+    layers.forEach(layer => {
+        if (!isOpening) {
+            layer.style.maxHeight = layer.scrollHeight + 'px';
+            layer.offsetHeight;
+            layer.style.maxHeight = '';
+        }
+        if (isOpening) {
+            layer.classList.add('is-revealed');
+        } else {
+            layer.classList.remove('is-revealed');
+        }
+    });
+
+    button.querySelector('.plus-icon').textContent = isOpening ? '\u2212' : '+';
+    button.classList.toggle('active-toggle', isOpening);
+
+    // Show/hide the Deep Dive button
+    const l3Btn = document.getElementById('ir-l3-btn');
+    if (l3Btn && layerClass === 'l2') {
+        l3Btn.style.display = isOpening ? 'flex' : 'none';
+        // If closing L2, also close L3
+        if (!isOpening) {
+            const l3Layers = section.querySelectorAll('.l3-container');
+            l3Layers.forEach(layer => {
+                layer.style.maxHeight = layer.scrollHeight + 'px';
+                layer.offsetHeight;
+                layer.style.maxHeight = '';
+                layer.classList.remove('is-revealed');
+            });
+            l3Btn.querySelector('.plus-icon').textContent = '+';
+            l3Btn.classList.remove('active-toggle');
+        }
+    }
+  }
+
   function toggleLayer(button, layerClass) {
     const section = button.closest('.layered-content');
     const targetLayer = section.querySelector(`.${layerClass}-container`);
