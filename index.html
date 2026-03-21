@@ -488,28 +488,30 @@
 
   .ask-quotes {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 32px 48px;
     margin-bottom: 3.5rem;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .ask-quote {
     display: flex;
-    align-items: stretch;
-    gap: 0;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--surface);
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 300px;
     opacity: 0;
-    animation: askFadeIn 0.5s ease-out forwards;
+    animation: askFadeIn 0.4s ease-out forwards;
   }
 
   .ask-quote:nth-child(1) { animation-delay: 0.2s; }
-  .ask-quote:nth-child(2) { animation-delay: 0.4s; }
-  .ask-quote:nth-child(3) { animation-delay: 0.6s; }
-  .ask-quote:nth-child(4) { animation-delay: 0.8s; }
-  .ask-quote:nth-child(5) { animation-delay: 1.0s; }
+  .ask-quote:nth-child(2) { animation-delay: 0.35s; }
+  .ask-quote:nth-child(3) { animation-delay: 0.5s; }
+  .ask-quote:nth-child(4) { animation-delay: 0.65s; }
+  .ask-quote:nth-child(5) { animation-delay: 0.8s; }
 
   @keyframes askFadeIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -517,45 +519,34 @@
   }
 
   .ask-quote-text {
-    flex: 1;
-    padding: 16px 20px;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
+    font-style: italic;
     font-weight: 400;
-    line-height: 1.6;
+    line-height: 1.55;
     color: var(--text);
-    opacity: 0.85;
+    opacity: 0.7;
+    margin-bottom: 6px;
   }
 
+  .ask-quote-text::before { content: '\201C'; }
+  .ask-quote-text::after { content: '\201D'; }
+
   .ask-quote-model {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 16px 20px;
-    min-width: 160px;
-    border-left: 1px solid var(--border);
+    display: block;
   }
 
   .ask-quote-model span {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    font-weight: 500;
-    letter-spacing: 1px;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: var(--text);
-    opacity: 0.35;
+    color: var(--text-dim);
+    opacity: 0.5;
   }
 
-  .ask-quote:first-child {
-    border-left: 2px solid #ff392bbb;
-  }
-
-  .ask-quote:hover {
-    background: rgba(255, 255, 255, 0.02);
-    border-color: #3d444d;
-  }
-
-  .ask-quote:hover .ask-quote-model span {
-    opacity: 0.55;
+  .ask-quote-model span::before {
+    content: '\2014\00a0';
   }
 
   .ask-dare {
@@ -617,16 +608,12 @@
       font-size: 1.2rem;
     }
 
-    .ask-quote {
-      flex-direction: column;
+    .ask-quotes {
+      gap: 24px 0;
     }
 
-    .ask-quote-model {
-      justify-content: flex-start;
-      min-width: unset;
-      padding: 6px 20px 12px;
-      border-left: none;
-      border-top: 1px solid var(--border);
+    .ask-quote {
+      max-width: 100%;
     }
 
     .ask-dare-line {
