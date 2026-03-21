@@ -35,6 +35,123 @@
 
     <main class="container">
 
+      <!-- ____________________________________Section 0: How CodeIR Represents Code______________________________-->
+        <section class="layered-content">
+            <div class="l1-container">
+                <h2>How CodeIR Represents Code</h2>
+                <p>
+                    CodeIR compiles every function, class, and method in a codebase into three levels of progressive detail. The agent works top-down: orient broadly, reason about dependencies, expand to source only when needed.
+                </p>
+
+                <div class="action-bar">
+                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                        <span class="plus-icon">+</span> Explanation
+                    </button>
+                    <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                        <span class="plus-icon">+</span> Deep Dive
+                    </button>
+                </div>
+            </div>
+
+            <div class="l2-container hidden-layer">
+                <div class="depth-tag-L2">Index — what exists and where it fits</div>
+                <pre><code>AMT ATHNTCT.02 #AUTH #CORE</code></pre>
+
+                <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                    <span class="plus-icon">+</span> Deep Dive
+                </button>
+            </div>
+
+            <div class="l3-container hidden-layer">
+                <div class="depth-tag-L3">Index Detail</div>
+                <p>
+                    Entity type (AMT = async method), stable ID (ATHNTCT.02), domain tags (#AUTH #CORE). At this level the full codebase fits in a single context window. The agent scans thousands of these to identify which entities are relevant to a task. Token cost: ~10 tokens per entity.
+                </p>
+            </div>
+        </section>
+
+        <section class="layered-content">
+            <div class="l1-container" style="padding-top: 0;">
+                <div class="action-bar">
+                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                        <span class="plus-icon">+</span> Explanation
+                    </button>
+                    <button class="reveal-btn secondary-btn l3-remote" onclick="toggleLayer(this, 'l3')" style="display: none;">
+                        <span class="plus-icon">+</span> Deep Dive
+                    </button>
+                </div>
+            </div>
+
+            <div class="l2-container hidden-layer">
+                <div class="depth-tag-L2">Behavior — what it does and what it touches</div>
+                <pre><code>AMT ATHNTCT.02 C=get_by_email,hash,update,verify_and_update F=AIRT A=2 #AUTH #CORE</code></pre>
+
+                <button class="reveal-btn secondary-btn l3-inline" onclick="toggleLayer(this, 'l3')">
+                    <span class="plus-icon">+</span> Deep Dive
+                </button>
+            </div>
+
+            <div class="l3-container hidden-layer">
+                <div class="depth-tag-L3">Behavior Detail</div>
+                <p>
+                    Same entity with outgoing calls (C=), behavioral flags (F=: A=assignments/augmented assigns, I=conditionals, R=returns, T=try/except), assignment count (A=), and domain tags. The agent can reason about dependencies, complexity, and blast radius without reading source. This is the level where most architectural decisions get made — the agent knows what this function touches and how complex it is. Token cost: ~25 tokens per entity.
+                </p>
+            </div>
+        </section>
+
+        <section class="layered-content">
+            <div class="l1-container" style="padding-top: 0;">
+                <div class="action-bar">
+                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                        <span class="plus-icon">+</span> Explanation
+                    </button>
+                </div>
+            </div>
+
+            <div class="l2-container hidden-layer">
+                <div class="depth-tag-L2">Source — the actual implementation, expanded on demand</div>
+                <pre><code>async def authenticate(
+    self, credentials: OAuth2PasswordRequestForm
+) -> Optional[models.UP]:
+    """
+    Authenticate and return a user following an email and a password.
+
+    Will automatically upgrade password hash if necessary.
+
+    :param credentials: The user credentials.
+    """
+    try:
+        user = await self.get_by_email(credentials.username)
+    except exceptions.UserNotExists:
+        # Run the hasher to mitigate timing attack
+        # Inspired from Django: https://code.djangoproject.com/ticket/20760
+        self.password_helper.hash(credentials.password)
+        return None
+
+    verified, updated_password_hash = self.password_helper.verify_and_update(
+        credentials.password, user.hashed_password
+    )
+    if not verified:
+        return None
+    # Update password hash to a more robust one if needed
+    if updated_password_hash is not None:
+        await self.user_db.update(user, {"hashed_password": updated_password_hash})
+
+    return user</code></pre>
+                <p>
+                    This is what the model reads without CodeIR — every time, in full, whether it needs the implementation details or not. ~120 tokens for one entity. Multiply across thousands of entities and the context window fills with syntax, comments, and formatting before the model has oriented itself. With CodeIR, this level is reached only when the agent needs to verify implementation or make a change.
+                </p>
+            </div>
+        </section>
+
+        <section class="layered-content">
+            <div class="l1-container" style="padding-top: 0;">
+                <p>
+                    The workflow in practice: the agent reads Index to find what's relevant, inspects Behavior to understand how entities connect, and expands to Source only where it needs to act. Most entities in a session never go past Behavior. The ones that get expanded are the ones that actually matter.
+                </p>
+            </div>
+        </section>
+
       <!-- ____________________________________Section 1______________________________-->
         <section class="layered-content">
             <div class="l1-container">
