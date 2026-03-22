@@ -878,6 +878,42 @@ async def read_token(token: str, session: Session) -> TokenData:
         </div>
     </section>
 
+      <!-- ____________________________________Section: What Can the Agent Ask?______________________________-->
+        <section class="layered-content">
+            <div class="l1-container">
+                <h2>What Can the Agent Ask?</h2>
+                <p>
+                    CodeIR gives your coding agent a set of structured queries against the index. Instead of reading files and hoping to find what's relevant, it asks directly:
+                </p>
+
+                <div class="action-bar">
+                    <button class="reveal-btn" onclick="toggleLayer(this, 'l2')">
+                        <span class="plus-icon">+</span> Explanation
+                    </button>
+                </div>
+            </div>
+
+            <div class="l2-container hidden-layer">
+                <div class="depth-tag-L2">Agent Queries</div>
+
+                <p><strong>"What's in this codebase?"</strong> → <code>codeir bearings</code> returns the full architectural map: every module, its category, entity count, and dependencies. The agent reads this once and knows where to look before it looks anywhere.</p>
+
+                <p><strong>"Which entities match this task?"</strong> → <code>codeir search "auth token validate"</code> does multi-term OR search with ranking across the full index. <code>--category core_logic</code> filters out tests and utilities.</p>
+
+                <p><strong>"Where does this pattern appear in source?"</strong> → <code>codeir grep "session_id" --path auth/</code> does regex search grouped by entity, with <code>-v</code> for full IR context per match.</p>
+
+                <p><strong>"What does this function actually do?"</strong> → <code>codeir show ATHNTCT.02 --level Behavior</code> returns the entity's calls, flags, assignment count, and tags — enough to reason about it without reading source.</p>
+
+                <p><strong>"What calls this function?"</strong> → <code>codeir callers ATHNTCT.02</code> returns three tiers: import-level, local, and fuzzy matches (marked <code>~</code> for probable but uncertain).</p>
+
+                <p><strong>"What breaks if I change this?"</strong> → <code>codeir impact ATHNTCT.02 --depth 2</code> traces reverse dependencies via BFS, grouped by distance, with the full dependency chain.</p>
+
+                <p><strong>"What's the minimum context to safely edit this?"</strong> → <code>codeir scope ATHNTCT.02</code> returns callers, callees, and sibling methods — everything the agent needs to understand blast radius before making a change.</p>
+
+                <p><strong>"Show me the actual code."</strong> → <code>codeir expand ATHNTCT.02</code> returns the raw source with entity boundary markers. This is the last step, not the first.</p>
+            </div>
+        </section>
+
       <!-- ____________________________________Claude Reviews Section______________________________-->
   <section class="content">
     <div class="claude-reviews-intro">
@@ -905,30 +941,9 @@ async def read_token(token: str, session: Session) -> TokenData:
             <div class="claude-pullquote">
                 "I found the bug in ~6 queries across a 663-file, 38k-entity codebase. Without CodeIR, I'd have been grepping through the ORM internals much longer."
             </div>
-            <button class="claude-expand-btn" onclick="toggleReview(this)">
-                <span class="claude-expand-arrow">&#9662;</span> Read full review
-            </button>
-            <div class="claude-review-full">
-                <p><strong>What worked well</strong></p>
-                <ol>
-                    <li><strong>Search was fast and effective</strong> — <code>codeir search "flush finalize"</code> immediately surfaced <code>FNLZFLSHCHNGS</code> (UOWTransaction.finalize_flush_changes). The compressed entity IDs made results scannable.</li>
-                    <li><strong>Behavior level was the sweet spot</strong> — <code>codeir show FNLZFLSHCHNGS --level Behavior</code> gave me:<br><br>
-                        <code>MT FNLZFLSHCHNGS C=_register_persistent,_remove_newly_deleted,difference,items,set F=IR A=3 #DB #CORE</code><br><br>
-                        This told me exactly what methods it calls without reading source. I knew where to look next.</li>
-                    <li><strong>Expand only when needed</strong> — I only used <code>codeir expand</code> twice. The Behavior level let me skip reading <code>_register_persistent</code> entirely until I needed to confirm the bug's impact.</li>
-                    <li><strong>Category filtering</strong> — <code>--category core_logic</code> helped cut through the 38k entities to find state-related logic quickly.</li>
-                </ol>
-
-                <p><strong>What could improve</strong></p>
-                <ol>
-                    <li><strong>Semantic search</strong> — <code>codeir search "list_only"</code> returned nothing because the term isn't in entity names. A grep-style content search would have helped here.<br>
-                    <span class="claude-dev-note">→ We added this suggestion when search returns no results, at Claude's suggestion</span></li>
-                    <li><strong>The ID compression is aggressive</strong> — <code>FNLZFLSHCHNGS</code> took me a moment to parse as "finalize_flush_changes". Readable once you get used to it, but there's a learning curve.</li>
-                </ol>
-
-                <p><strong>Overall</strong></p>
-                <p>The Orient → Behavior → Source workflow worked exactly as designed. I found the bug in ~6 queries across a 663-file, 38k-entity codebase. Without CodeIR, I'd have been grepping through the ORM internals much longer.</p>
-            </div>
+            <a class="claude-expand-btn" href="https://github.com/tnenglert/CodeIR/discussions/1">
+                Read full review →
+            </a>
         </div>
 
         <div class="claude-feedback claude-review-card">
@@ -939,35 +954,9 @@ async def read_token(token: str, session: Session) -> TokenData:
             <div class="claude-pullquote">
                 "Going from Behavior to exact source with CodeIR expand was fast. I knew what I was looking for before reading the code."
             </div>
-            <button class="claude-expand-btn" onclick="toggleReview(this)">
-                <span class="claude-expand-arrow">&#9662;</span> Read full review
-            </button>
-            <div class="claude-review-full">
-                <p>Ha! Happy to give feedback on CodeIR.</p>
-
-                <p><strong>What Worked Well</strong></p>
-                <ol>
-                    <li><strong>Search was effective</strong> — <code>codeir search descriptor cache related</code> quickly surfaced <code>ForwardManyToOneDescriptor.is_cached</code> and related entities. The multi-term OR ranking worked well.</li>
-                    <li><strong>Behavior level was genuinely useful</strong> — Seeing <code>CLS FRWRDMNYTNDSCRPTR C=ColPairs,RelatedObjectDoesNotExist,TupleIn,ValueError,_traverse_ancestors,allow_relation F=EILRT A=23</code> told me immediately this class does error handling, has conditionals/loops/returns/try-except, and talks to specific collaborators — without reading 200 lines of source.</li>
-                    <li><strong>The expand → source workflow</strong> — Going from Behavior to exact source with <code>codeir expand ISCCHD.03</code> was fast. I knew what I was looking for before reading the code.</li>
-                </ol>
-
-                <p><strong>What I Ended Up Doing Anyway</strong></p>
-                <ol>
-                    <li><strong>Fell back to Grep/Read for grep-style exploration</strong> — When I wanted to see all usages of <code>_result_cache</code> in query.py with context, I used Grep directly. CodeIR search is entity-oriented, which is great for "find the function that does X" but less suited for "show me every line mentioning Y."</li>
-                    <li><strong>Direct file reads for understanding flow</strong> — For the <code>__get__</code> method, I read a chunk of the file to see the full logic flow. The Behavior level told me what it calls, but I needed source to understand when and why.</li>
-                </ol>
-
-                <p><strong>Suggestions</strong></p>
-                <ol>
-                    <li><strong>codeir grep</strong> — A wrapper that returns IR context alongside grep matches could bridge the gap.<br>
-                    <span class="claude-dev-note">→ We added this feature at Claude's suggestion and he uses it often</span></li>
-                    <li>Caller results were good — I didn't use callers here but the <code>~</code> fuzzy marker is a nice touch for uncertain matches.</li>
-                </ol>
-
-                <p><strong>Overall</strong></p>
-                <p>It shortened the path from "where does Django cache related objects?" to "here's the exact line" significantly. The Django codebase is 41K entities — without the index, I'd have been grepping blind.</p>
-            </div>
+            <a class="claude-expand-btn" href="https://github.com/tnenglert/CodeIR/discussions/1">
+                Read full review →
+            </a>
         </div>
 
     </div>
